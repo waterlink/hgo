@@ -51,18 +51,32 @@ hexDigit = P.oneOf "0123456789ABCDEFabcdef"
 
 -- # Lexical elements
 
+class Representable a where
+      represent :: a -> String
+
+data IntegerLiteral = Decimal String
+                    | Octal String
+                    | Hex String
+
+instance Representable IntegerLiteral where
+         represent (Decimal value) = "(decimal) " ++ value
+         represent (Octal value) = "(octal) " ++ value
+         represent (Hex value) = "(hex) " ++ value
+
 data LexicalElement = LineComment String
                     | GeneralComment String
                     | Identifier String
                     | Keyword String
                     | Operator String
+                    | IntegerLiteral IntegerLiteral
 
-represent :: LexicalElement => String
-represent (LineComment text) = "line comment: '" ++ text ++ "'"
-represent (GeneralComment text) = "general comment: '" ++ text ++ "'"
-represent (Identifier name) = "identifier: '" ++ name ++ "'"
-represent (Keyword name) = "keyword: '" ++ name ++ "'"
-represent (Operator name) = "operator: '" ++ name ++ "'"
+instance Representable LexicalElement where
+         represent (LineComment text) = "line comment: '" ++ text ++ "'"
+         represent (GeneralComment text) = "general comment: '" ++ text ++ "'"
+         represent (Identifier name) = "identifier: '" ++ name ++ "'"
+         represent (Keyword name) = "keyword: '" ++ name ++ "'"
+         represent (Operator name) = "operator: '" ++ name ++ "'"
+         represent (IntegerLiteral value) = "integer literal: '" ++ (represent value) ++ "'"
 
 -- Comments
 
@@ -114,13 +128,33 @@ operator :: P.Parser LexicalElement
 operator = do name <- parseOperator
               return $ Operator name
 
+integerLiteral :: P.Parser LexicalElement
+integerLiteral = decimalLiteral <|> hexLiteral <|> octalLiteral
+
+decimalLiteral :: P.Parser LexicalElement
+decimalLiteral = P.try $ do first <- P.oneOf "123456789"
+                            rest <- P.many decimalDigit
+                            return $ IntegerLiteral (Decimal $ first:rest)
+
+octalLiteral :: P.Parser LexicalElement
+octalLiteral = P.try $ do first <- P.char '0'
+                          rest <- P.many octalDigit
+                          return $ IntegerLiteral (Octal $ first:rest)
+
+hexLiteral :: P.Parser LexicalElement
+hexLiteral = P.try $ do first <- P.char '0'
+                        middle <- P.oneOf "xX"
+                        rest <- P.many hexDigit
+                        return $ IntegerLiteral (Hex $ first:middle:rest)
+
 -- # Final syntax definition
 
-final = keyword
+final = lineComment
+    <|> generalComment
+    <|> keyword
     <|> identifier
     <|> operator
-    <|> lineComment
-    <|> generalComment
+    <|> integerLiteral
 
 -- # Helpers
 
