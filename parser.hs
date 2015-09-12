@@ -4,6 +4,8 @@ import System.Environment
 import System.IO
 import Control.Monad
 import System.Exit
+import Data.List
+import Data.Ord
 
 import Text.ParserCombinators.Parsec ((<|>))
 
@@ -53,12 +55,14 @@ data LexicalElement = LineComment String
                     | GeneralComment String
                     | Identifier String
                     | Keyword String
+                    | Operator String
 
 represent :: LexicalElement => String
 represent (LineComment text) = "line comment: '" ++ text ++ "'"
 represent (GeneralComment text) = "general comment: '" ++ text ++ "'"
 represent (Identifier name) = "identifier: '" ++ name ++ "'"
 represent (Keyword name) = "keyword: '" ++ name ++ "'"
+represent (Operator name) = "operator: '" ++ name ++ "'"
 
 -- Comments
 
@@ -93,10 +97,28 @@ keyword :: P.Parser LexicalElement
 keyword = do name <- parseKeyword
              return $ Keyword name
 
+operators = [
+             "+",    "&",     "+=",    "&=",     "&&",    "==",    "!=",    "(",    ")",
+             "-",    "|",     "-=",    "|=",     "||",    "<",     "<=",    "[",    "]",
+             "*",    "^",     "*=",    "^=",     "<-",    ">",     ">=",    "{",    "}",
+             "/",    "<<",    "/=",    "<<=",    "++",    "=",     ":=",    ",",    ";",
+             "%",    ">>",    "%=",    ">>=",    "--",    "!",     "...",   ".",    ":",
+                     "&^",             "&^="]
+countOperatorsWithThatPrefix x = length $ filter (isPrefixOf x) operators
+parseOrderedOperators = sortBy (comparing countOperatorsWithThatPrefix) operators
+
+parseOperator :: P.Parser String
+parseOperator = P.choice $ map string parseOrderedOperators
+
+operator :: P.Parser LexicalElement
+operator = do name <- parseOperator
+              return $ Operator name
+
 -- # Final syntax definition
 
 final = keyword
     <|> identifier
+    <|> operator
     <|> lineComment
     <|> generalComment
 
