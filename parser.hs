@@ -55,21 +55,21 @@ data LexicalElement = LineComment String
                     | Keyword String
 
 represent :: LexicalElement => String
-represent (LineComment text) = "line comment: " ++ text
-represent (GeneralComment text) = "general comment: " ++ text
-represent (Identifier name) = "identifier: " ++ name
-represent (Keyword name) = "keyword: " ++ name
+represent (LineComment text) = "line comment: '" ++ text ++ "'"
+represent (GeneralComment text) = "general comment: '" ++ text ++ "'"
+represent (Identifier name) = "identifier: '" ++ name ++ "'"
+represent (Keyword name) = "keyword: '" ++ name ++ "'"
 
 -- Comments
 
 lineComment :: P.Parser LexicalElement
-lineComment = do P.try $ P.string "//"
+lineComment = do string "//"
                  text <- P.manyTill unicodeChar (P.try newline)
                  return $ LineComment text
 
 generalComment :: P.Parser LexicalElement
-generalComment = do P.try $ P.string "/*"
-                    text <- P.manyTill unicodeChar (P.try $ P.string "*/")
+generalComment = do string "/*"
+                    text <- P.manyTill unicodeChar (string "*/")
                     return $ GeneralComment text
 
 -- Tokens
@@ -79,35 +79,18 @@ identifier = do first <- letter
                 rest <- P.many $ letter <|> unicodeDigit
                 return $ Identifier (first:rest)
 
+keywords = [
+            "break",        "default",      "func",         "interface",    "select",
+            "case",         "defer",        "go",           "map",          "struct",
+            "chan",         "else",         "goto",         "package",      "switch",
+            "const",        "fallthrough",  "if",           "range",        "type",
+            "continue",     "for",          "import",       "return",       "var"]
+
 parseKeyword :: P.Parser String
-parseKeyword = P.string "break"
-           <|> P.string "case"
-           <|> P.string "chan"
-           <|> P.string "const"
-           <|> P.string "continue"
-           <|> P.string "default"
-           <|> P.string "defer"
-           <|> P.string "else"
-           <|> P.string "fallthrough"
-           <|> P.string "for"
-           <|> P.string "func"
-           <|> P.string "go"
-           <|> P.string "goto"
-           <|> P.string "if"
-           <|> P.string "import"
-           <|> P.string "interface"
-           <|> P.string "map"
-           <|> P.string "package"
-           <|> P.string "range"
-           <|> P.string "return"
-           <|> P.string "select"
-           <|> P.string "struct"
-           <|> P.string "switch"
-           <|> P.string "type"
-           <|> P.string "var"
+parseKeyword = P.choice $ map word keywords
 
 keyword :: P.Parser LexicalElement
-keyword = do name <- P.try parseKeyword
+keyword = do name <- parseKeyword
              return $ Keyword name
 
 -- # Final syntax definition
@@ -116,3 +99,10 @@ final = keyword
     <|> identifier
     <|> lineComment
     <|> generalComment
+
+-- # Helpers
+
+string x = P.try $ P.string x
+word x = P.try $ do value <- P.string x
+                    P.notFollowedBy (letter <|> unicodeDigit)
+                    return value
