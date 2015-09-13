@@ -64,7 +64,8 @@ data LexicalElement = LineComment String
                     | Operator String
                     | IntegerLiteral IntegerLiteral
                     | FloatLiteral FloatLiteral
-                    | ImaginaryLiteral LexicalElement
+                    | ImaginaryIntegerLiteral IntegerLiteral
+                    | ImaginaryFloatLiteral FloatLiteral
                     deriving (Eq, Show)
 
 instance Representable LexicalElement where
@@ -75,7 +76,8 @@ instance Representable LexicalElement where
          represent (Operator name) = "operator: '" ++ name ++ "'"
          represent (IntegerLiteral value) = "integer literal: '" ++ (represent value) ++ "'"
          represent (FloatLiteral value) = "float literal: '" ++ (represent value) ++ "'"
-         represent (ImaginaryLiteral value) = "imaginary literal: '" ++ (represent value) ++ "'"
+         represent (ImaginaryIntegerLiteral value) = "imaginary literal: '" ++ (represent value) ++ "'"
+         represent (ImaginaryFloatLiteral value) = "imaginary literal: '" ++ (represent value) ++ "'"
 
 -- Comments
 
@@ -120,35 +122,44 @@ parseOperator = P.choice $ map string parseOrderedOperators
 operator = do name <- parseOperator
               return $ Operator name
 
-integerLiteral = decimalLiteral <|> hexLiteral <|> octalLiteral
+integerLiteral = do value <- parseIntegerLiteral
+                    return $ IntegerLiteral value
+
+parseIntegerLiteral = decimalLiteral <|> hexLiteral <|> octalLiteral <|> integerZero
+
+integerZero = do value <- P.char '0'
+                 return $ Decimal "0"
 
 decimalLiteral = P.try $ do first <- P.oneOf "123456789"
                             rest <- P.many decimalDigit
-                            return $ IntegerLiteral (Decimal $ first:rest)
+                            return $ (Decimal $ first:rest)
 
 octalLiteral = P.try $ do first <- P.char '0'
-                          rest <- P.many octalDigit
-                          return $ IntegerLiteral (Octal $ first:rest)
+                          rest <- P.many1 octalDigit
+                          return $ (Octal $ first:rest)
 
 hexLiteral = P.try $ do first <- P.char '0'
                         middle <- P.oneOf "xX"
                         rest <- P.many hexDigit
-                        return $ IntegerLiteral (Hex $ first:middle:rest)
+                        return $ (Hex $ first:middle:rest)
 
-floatLiteral = a <|> b <|> c
-               where
-                 a = P.try $ do integer <- decimals
-                                P.char '.'
-                                fractional <- P.option "0" decimals
-                                exponent <- P.option "+0" exponentPart
-                                return $ FloatLiteral (FloatValue integer fractional exponent)
-                 b = P.try $ do integer <- decimals
-                                exponent <- exponentPart
-                                return $ FloatLiteral (FloatValue integer "0" exponent)
-                 c = P.try $ do P.char '.'
-                                fractional <- decimals
-                                exponent <- P.option "+0" exponentPart
-                                return $ FloatLiteral (FloatValue "0" fractional exponent)
+parseFloatLiteral = a <|> b <|> c
+                    where
+                      a = P.try $ do integer <- decimals
+                                     P.char '.'
+                                     fractional <- P.option "0" decimals
+                                     exponent <- P.option "+0" exponentPart
+                                     return $ FloatValue integer fractional exponent
+                      b = P.try $ do integer <- decimals
+                                     exponent <- exponentPart
+                                     return $ FloatValue integer "0" exponent
+                      c = P.try $ do P.char '.'
+                                     fractional <- decimals
+                                     exponent <- P.option "+0" exponentPart
+                                     return $ FloatValue "0" fractional exponent
+
+floatLiteral = do value <- parseFloatLiteral
+                  return $ FloatLiteral value
 
 decimals = P.try $ do first <- decimalDigit
                       rest <- P.many decimalDigit
@@ -159,14 +170,14 @@ exponentPart = P.try $ do P.oneOf "eE"
                           rest <- decimals
                           return $ sign:rest
 
---imaginaryLiteral = a <|> b
---                   where
---                     a = P.try $ do integer <- integerLiteral
---                                    P.char 'i'
---                                    return $ ImaginaryLiteral integerLiteral
---                     b = P.try $ do float <- floatLiteral
---                                    P.char 'i'
---                                    return $ ImaginaryLiteral floatLiteral
+imaginaryLiteral = a <|> b
+                   where
+                     a = P.try $ do integer <- parseIntegerLiteral
+                                    P.char 'i'
+                                    return $ ImaginaryIntegerLiteral integer
+                     b = P.try $ do float <- parseFloatLiteral
+                                    P.char 'i'
+                                    return $ ImaginaryFloatLiteral float
 
 -- # Final syntax definition
 
@@ -174,6 +185,7 @@ final = lineComment
     <|> generalComment
     <|> keyword
     <|> identifier
+    <|> imaginaryLiteral
     <|> floatLiteral
     <|> integerLiteral
     <|> operator

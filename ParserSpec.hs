@@ -39,6 +39,7 @@ main = hspec $ do
       P.rawParse "&=" `shouldBe` Right (P.Operator "&=")
 
     it "parses integer literals" $ do
+      P.rawParse "0" `shouldBe` Right (P.IntegerLiteral (P.Decimal "0"))
       P.rawParse "42" `shouldBe` Right (P.IntegerLiteral (P.Decimal "42"))
       P.rawParse "0600" `shouldBe` Right (P.IntegerLiteral (P.Octal "0600"))
       P.rawParse "0xBadFace3f" `shouldBe` Right (P.IntegerLiteral (P.Hex "0xBadFace3f"))
@@ -55,13 +56,13 @@ main = hspec $ do
       P.rawParse ".25" `shouldBe` Right (P.FloatLiteral $ P.FloatValue "0" "25" "+0")
       P.rawParse ".12345E+5" `shouldBe` Right (P.FloatLiteral $ P.FloatValue "0" "12345" "+5")
 
-    --it "parses imaginary literals" $ do
-    --  P.rawParse "0i" `shouldBe` Right (P.ImaginaryLiteral $ P.IntegerLiteral "0")
-    --  P.rawParse "011i" `shouldBe` Right (P.ImaginaryLiteral $ P.IntegerLiteral "11")
-    --  P.rawParse "0.i" `shouldBe` Right (P.ImaginaryLiteral $ P.FloatLiteral "0" "0" "+0")
-    --  P.rawParse "2.718128i" `shouldBe` Right (P.ImaginaryLiteral $ P.FloatLiteral "2" "718128" "+0")
-    --  P.rawParse "1.e+0i" `shouldBe` Right (P.ImaginaryLiteral $ P.FloatLiteral "1" "0" "+0")
-    --  P.rawParse "6.67428e-11i" `shouldBe` Right (P.ImaginaryLiteral $ P.FloatLiteral "6" "67428" "-11")
-    --  P.rawParse "1E6i" `shouldBe` Right (P.ImaginaryLiteral $ P.FloatLiteral "1" "0" "+6")
-    --  P.rawParse ".25i" `shouldBe` Right (P.ImaginaryLiteral $ P.FloatLiteral "0" "25" "+0")
-    --  P.rawParse ".12345E+5i" `shouldBe` Right (P.ImaginaryLiteral $ P.FloatLiteral "0" "12345" "+5")
+    it "parses imaginary literals" $ do
+      P.rawParse "0i" `shouldBe` Right (P.ImaginaryIntegerLiteral $ P.Decimal "0")
+      P.rawParse "011i" `shouldBe` Right (P.ImaginaryIntegerLiteral $ P.Octal "011")
+      P.rawParse "0.i" `shouldBe` Right (P.ImaginaryFloatLiteral $ P.FloatValue "0" "0" "+0")
+      P.rawParse "2.718128i" `shouldBe` Right (P.ImaginaryFloatLiteral $ P.FloatValue "2" "718128" "+0")
+      P.rawParse "1.e+0i" `shouldBe` Right (P.ImaginaryFloatLiteral $ P.FloatValue "1" "0" "+0")
+      P.rawParse "6.67428e-11i" `shouldBe` Right (P.ImaginaryFloatLiteral $ P.FloatValue "6" "67428" "-11")
+      P.rawParse "1E6i" `shouldBe` Right (P.ImaginaryFloatLiteral $ P.FloatValue "1" "0" "+6")
+      P.rawParse ".25i" `shouldBe` Right (P.ImaginaryFloatLiteral $ P.FloatValue "0" "25" "+0")
+      P.rawParse ".12345E+5i" `shouldBe` Right (P.ImaginaryFloatLiteral $ P.FloatValue "0" "12345" "+5")
