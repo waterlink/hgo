@@ -1,4 +1,4 @@
-module Parser where
+module Lexer where
 
 import Data.List
 import Data.Ord
