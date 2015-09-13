@@ -8,9 +8,11 @@ import Text.ParserCombinators.Parsec ((<|>))
 import qualified Text.ParserCombinators.Parsec as P
 import qualified Text.Parsec.String as PS
 
-parse contents = case P.parse final "$STDIN" contents of
+parse contents = case rawParse contents of
                       Left err -> "No match: " ++ show err
                       Right val -> "Parsed: " ++ (represent val)
+
+rawParse contents = P.parse final "$STDIN" contents
 
 -- # Source code representation
 
@@ -42,6 +44,7 @@ class Representable a where
 data IntegerLiteral = Decimal String
                     | Octal String
                     | Hex String
+                    deriving (Eq, Show)
 
 instance Representable IntegerLiteral where
          represent (Decimal value) = "(decimal) " ++ value
@@ -55,6 +58,7 @@ data LexicalElement = LineComment String
                     | Operator String
                     | IntegerLiteral IntegerLiteral
                     | FloatLiteral String String String
+                    deriving (Eq, Show)
 
 instance Representable LexicalElement where
          represent (LineComment text) = "line comment: '" ++ text ++ "'"
