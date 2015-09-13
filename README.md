@@ -17,6 +17,7 @@ features to the language making it much more high level.
 - Feature: AST-node level template-like macros
 - Feature: operator overloading
 - Feature: pattern matching in function signatures
+- Feature: string interpolation syntax
 
 ## Contributors
 
