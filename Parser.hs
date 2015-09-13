@@ -2,6 +2,7 @@ module Parser where
 
 import Data.List
 import Data.Ord
+import Data.Char (isSpace)
 
 import Text.ParserCombinators.Parsec ((<|>))
 
@@ -91,6 +92,7 @@ data LexicalElement = LineComment String
                     | RuneLiteral RuneValue
                     | StringLiteral [RuneValue]
                     | Whitespace
+                    | Newline
                     | Tokens [LexicalElement]
                     | None
                     deriving (Eq, Show)
@@ -108,6 +110,7 @@ instance Representable LexicalElement where
          represent (RuneLiteral value) = "rune: '" ++ (represent value) ++ "'"
          represent (StringLiteral value) = "string: [" ++ (intercalate ", " $ map represent value) ++ "]"
          represent (Whitespace) = "whitespace"
+         represent (Newline) = "newline"
          represent (Tokens tokens) = "tokens: [" ++ (intercalate ", " $ map represent tokens) ++ "]"
          represent (None) = "EOF reached"
 
@@ -261,16 +264,20 @@ stringLiteral = rawString <|> interpretedString
                                                  runes <- P.manyTill (byteValue <|> unicodeValue) $ P.char '"'
                                                  return $ StringLiteral runes
 
-whitespace = do P.spaces
+whitespace = do P.skipMany $ P.satisfy (\c -> (isSpace c) && (c /= '\n'))
                 return $ Whitespace
 
+newlineElement = P.try $ do newline
+                            return Newline
+
 none = do P.eof
-          return $ None
+          return None
 
 -- # Final syntax definition
 
 final = whitespace >> (lineComment
                    <|> generalComment
+                   <|> newlineElement
                    <|> keyword
                    <|> identifier
                    <|> imaginaryLiteral
@@ -282,11 +289,35 @@ final = whitespace >> (lineComment
                    <|> none)
 
 tokens = do head <- final
-            case head of
-                 None -> return $ Tokens []
-                 _ -> do rest <- tokens
-                         case rest of
-                              Tokens tail -> return $ Tokens (head:tail)
+            let fn = case head of
+                          None -> empty
+                          Identifier _ -> autoSemicolon
+                          IntegerLiteral _ -> autoSemicolon
+                          FloatLiteral _ -> autoSemicolon
+                          ImaginaryIntegerLiteral _ -> autoSemicolon
+                          ImaginaryFloatLiteral _ -> autoSemicolon
+                          RuneLiteral _ -> autoSemicolon
+                          StringLiteral _ -> autoSemicolon
+                          Keyword "break" -> autoSemicolon
+                          Keyword "continue" -> autoSemicolon
+                          Keyword "fallthrough" -> autoSemicolon
+                          Keyword "return" -> autoSemicolon
+                          Operator "++" -> autoSemicolon
+                          Operator "--" -> autoSemicolon
+                          Operator ")" -> autoSemicolon
+                          Operator "]" -> autoSemicolon
+                          Operator "}" -> autoSemicolon
+                          _ -> appendTokens
+            fn head
+            where
+              empty head = return $ Tokens []
+              autoSemicolon head = do rest <- tokens
+                                      case rest of
+                                          Tokens (Newline:tail) -> return $ Tokens (head:(Operator ";"):Newline:tail)
+                                          Tokens tail -> return $ Tokens (head:tail)
+              appendTokens head = do rest <- tokens
+                                     case rest of
+                                          Tokens tail -> return $ Tokens (head:tail)
 
 
 -- # Helpers

@@ -133,11 +133,19 @@ main = hspec $ do
         P.StringLiteral $ map P.CharRuneValue "fmt"])
 
       P.parseAll "\n  import (\n\"fmt\"\n\"io\"\n)\n" `shouldBe` Right (P.Tokens [
+        P.Newline,
         P.Keyword "import",
         P.Operator "(",
+        P.Newline,
         P.StringLiteral $ map P.CharRuneValue "fmt",
+        P.Operator ";",
+        P.Newline,
         P.StringLiteral $ map P.CharRuneValue "io",
-        P.Operator ")"])
+        P.Operator ";",
+        P.Newline,
+        P.Operator ")",
+        P.Operator ";",
+        P.Newline])
 
     it "handles function definition" $ do
       P.parseAll "func main() {\n  fmt.Println(\"Hello, World!\")\n}\n" `shouldBe` Right (P.Tokens [
@@ -146,10 +154,15 @@ main = hspec $ do
         P.Operator "(",
         P.Operator ")",
         P.Operator "{",
+        P.Newline,
         P.Identifier "fmt",
         P.Operator ".",
         P.Identifier "Println",
         P.Operator "(",
         P.StringLiteral $ map P.CharRuneValue "Hello, World!",
         P.Operator ")",
-        P.Operator "}"])
+        P.Operator ";",
+        P.Newline,
+        P.Operator "}",
+        P.Operator ";",
+        P.Newline])
