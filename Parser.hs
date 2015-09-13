@@ -51,13 +51,20 @@ instance Representable IntegerLiteral where
          represent (Octal value) = "(octal) " ++ value
          represent (Hex value) = "(hex) " ++ value
 
+data FloatLiteral = FloatValue String String String
+                    deriving (Eq, Show)
+
+instance Representable FloatLiteral where
+         represent (FloatValue integer fractional exponent) = integer ++ "." ++ fractional ++ "e" ++ exponent
+
 data LexicalElement = LineComment String
                     | GeneralComment String
                     | Identifier String
                     | Keyword String
                     | Operator String
                     | IntegerLiteral IntegerLiteral
-                    | FloatLiteral String String String
+                    | FloatLiteral FloatLiteral
+                    | ImaginaryLiteral LexicalElement
                     deriving (Eq, Show)
 
 instance Representable LexicalElement where
@@ -67,7 +74,8 @@ instance Representable LexicalElement where
          represent (Keyword name) = "keyword: '" ++ name ++ "'"
          represent (Operator name) = "operator: '" ++ name ++ "'"
          represent (IntegerLiteral value) = "integer literal: '" ++ (represent value) ++ "'"
-         represent (FloatLiteral integer fractional exponent) = "float literal: '" ++ integer ++ "." ++ fractional ++ "e" ++ exponent ++ "'"
+         represent (FloatLiteral value) = "float literal: '" ++ (represent value) ++ "'"
+         represent (ImaginaryLiteral value) = "imaginary literal: '" ++ (represent value) ++ "'"
 
 -- Comments
 
@@ -133,14 +141,14 @@ floatLiteral = a <|> b <|> c
                                 P.char '.'
                                 fractional <- P.option "0" decimals
                                 exponent <- P.option "+0" exponentPart
-                                return $ FloatLiteral integer fractional exponent
+                                return $ FloatLiteral (FloatValue integer fractional exponent)
                  b = P.try $ do integer <- decimals
                                 exponent <- exponentPart
-                                return $ FloatLiteral integer "0" exponent
+                                return $ FloatLiteral (FloatValue integer "0" exponent)
                  c = P.try $ do P.char '.'
                                 fractional <- decimals
                                 exponent <- P.option "+0" exponentPart
-                                return $ FloatLiteral "0" fractional exponent
+                                return $ FloatLiteral (FloatValue "0" fractional exponent)
 
 decimals = P.try $ do first <- decimalDigit
                       rest <- P.many decimalDigit
@@ -150,6 +158,15 @@ exponentPart = P.try $ do P.oneOf "eE"
                           sign <- P.option '+' (P.oneOf "+-")
                           rest <- decimals
                           return $ sign:rest
+
+--imaginaryLiteral = a <|> b
+--                   where
+--                     a = P.try $ do integer <- integerLiteral
+--                                    P.char 'i'
+--                                    return $ ImaginaryLiteral integerLiteral
+--                     b = P.try $ do float <- floatLiteral
+--                                    P.char 'i'
+--                                    return $ ImaginaryLiteral floatLiteral
 
 -- # Final syntax definition
 
