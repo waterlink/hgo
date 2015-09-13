@@ -57,6 +57,22 @@ data FloatLiteral = FloatValue String String String
 instance Representable FloatLiteral where
          represent (FloatValue integer fractional exponent) = integer ++ "." ++ fractional ++ "e" ++ exponent
 
+data RuneValue = CharRuneValue Char
+               | OctalRuneValue String
+               | HexRuneValue String
+               | LittleURuneValue String
+               | BigURuneValue String
+               | EscapedCharRuneValue Char
+               deriving (Eq, Show)
+
+instance Representable RuneValue where
+         represent (CharRuneValue x) = x:""
+         represent (OctalRuneValue x) = "(octal) " ++ x
+         represent (HexRuneValue x) = "(hex) " ++ x
+         represent (LittleURuneValue x) = "\\u" ++ x
+         represent (BigURuneValue x) = "\\U" ++ x
+         represent (EscapedCharRuneValue x) = "\\" ++ (x:"")
+
 data LexicalElement = LineComment String
                     | GeneralComment String
                     | Identifier String
@@ -66,6 +82,7 @@ data LexicalElement = LineComment String
                     | FloatLiteral FloatLiteral
                     | ImaginaryIntegerLiteral IntegerLiteral
                     | ImaginaryFloatLiteral FloatLiteral
+                    | RuneLiteral RuneValue
                     deriving (Eq, Show)
 
 instance Representable LexicalElement where
@@ -78,6 +95,7 @@ instance Representable LexicalElement where
          represent (FloatLiteral value) = "float literal: '" ++ (represent value) ++ "'"
          represent (ImaginaryIntegerLiteral value) = "imaginary literal: '" ++ (represent value) ++ "'"
          represent (ImaginaryFloatLiteral value) = "imaginary literal: '" ++ (represent value) ++ "'"
+         represent (RuneLiteral value) = "rune: '" ++ (represent value) ++ "'"
 
 -- Comments
 
@@ -179,6 +197,47 @@ imaginaryLiteral = a <|> b
                                     P.char 'i'
                                     return $ ImaginaryFloatLiteral float
 
+runeLiteral = P.try $ do P.char '\''
+                         value <- byteValue <|> unicodeValue
+                         P.char '\''
+                         return $ RuneLiteral value
+
+unicodeValue = littleUValue <|> bigUValue <|> escapedChar <|> unicodeCharRune
+               where
+                 unicodeCharRune = P.try $ do value <- unicodeChar
+                                              return $ CharRuneValue value
+                 littleUValue = P.try $ do P.string "\\u"
+                                           h1 <- hexDigit
+                                           h2 <- hexDigit
+                                           h3 <- hexDigit
+                                           h4 <- hexDigit
+                                           return $ LittleURuneValue [h1, h2, h3, h4]
+                 bigUValue = P.try $ do P.string "\\U"
+                                        h1 <- hexDigit
+                                        h2 <- hexDigit
+                                        h3 <- hexDigit
+                                        h4 <- hexDigit
+                                        h5 <- hexDigit
+                                        h6 <- hexDigit
+                                        h7 <- hexDigit
+                                        h8 <- hexDigit
+                                        return $ BigURuneValue [h1, h2, h3, h4, h5, h6, h7, h8]
+                 escapedChar = P.try $ do P.char '\\'
+                                          value <- P.oneOf $ '\\':'\'':'"':"abfnrtv"
+                                          return $ EscapedCharRuneValue value
+
+byteValue = octalByteValue <|> hexByteValue
+            where
+              octalByteValue = P.try $ do P.char '\\'
+                                          o1 <- octalDigit
+                                          o2 <- octalDigit
+                                          o3 <- octalDigit
+                                          return $ OctalRuneValue [o1, o2, o3]
+              hexByteValue = P.try $ do P.string "\\x"
+                                        h1 <- hexDigit
+                                        h2 <- hexDigit
+                                        return $ HexRuneValue [h1, h2]
+
 -- # Final syntax definition
 
 final = lineComment
@@ -189,6 +248,7 @@ final = lineComment
     <|> floatLiteral
     <|> integerLiteral
     <|> operator
+    <|> runeLiteral
 
 -- # Helpers
 

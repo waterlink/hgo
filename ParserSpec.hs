@@ -1,11 +1,16 @@
 module ParserSpec where
 
 import Test.Hspec
-import qualified Parser as P
-import qualified Text.ParserCombinators.Parsec as Parsec
+import Data.Either
 
-instance Eq Parsec.ParseError where
+import qualified Parser as P
+import qualified Text.ParserCombinators.Parsec as PC
+import qualified Text.ParserCombinators.Parsec.Error as PCError
+
+instance Eq PC.ParseError where
          (==) x y = show x == show y
+
+isLeft = null . rights . return
 
 main = hspec $ do
   describe "rawParse" $ do
@@ -66,3 +71,26 @@ main = hspec $ do
       P.rawParse "1E6i" `shouldBe` Right (P.ImaginaryFloatLiteral $ P.FloatValue "1" "0" "+6")
       P.rawParse ".25i" `shouldBe` Right (P.ImaginaryFloatLiteral $ P.FloatValue "0" "25" "+0")
       P.rawParse ".12345E+5i" `shouldBe` Right (P.ImaginaryFloatLiteral $ P.FloatValue "0" "12345" "+5")
+
+    it "parses runes" $ do
+      P.rawParse "'a'" `shouldBe` Right (P.RuneLiteral $ P.CharRuneValue 'a')
+      P.rawParse "'ä'" `shouldBe` Right (P.RuneLiteral $ P.CharRuneValue 'ä')
+      P.rawParse "'本'" `shouldBe` Right (P.RuneLiteral $ P.CharRuneValue '本')
+      P.rawParse "'\\t'" `shouldBe` Right (P.RuneLiteral $ P.EscapedCharRuneValue 't')
+      P.rawParse "'\\000'" `shouldBe` Right (P.RuneLiteral $ P.OctalRuneValue "000")
+      P.rawParse "'\\007'" `shouldBe` Right (P.RuneLiteral $ P.OctalRuneValue "007")
+      P.rawParse "'\\377'" `shouldBe` Right (P.RuneLiteral $ P.OctalRuneValue "377")
+      P.rawParse "'\\x07'" `shouldBe` Right (P.RuneLiteral $ P.HexRuneValue "07")
+      P.rawParse "'\\xff'" `shouldBe` Right (P.RuneLiteral $ P.HexRuneValue "ff")
+      P.rawParse "'\\u12e4'" `shouldBe` Right (P.RuneLiteral $ P.LittleURuneValue "12e4")
+      P.rawParse "'\\U00101234'" `shouldBe` Right (P.RuneLiteral $ P.BigURuneValue "00101234")
+      P.rawParse "'\\\''" `shouldBe` Right (P.RuneLiteral $ P.EscapedCharRuneValue '\'')
+      P.rawParse "'aa'" `shouldSatisfy` isLeft
+      P.rawParse "'\\xa'" `shouldSatisfy` isLeft
+      P.rawParse "'\\0'" `shouldSatisfy` isLeft
+
+      -- NOTE: these two according to Go RFC should be invalid, but they are
+      -- invalid because of being invalid unicode, so at parse time these
+      -- should succeed:
+      P.rawParse "'\\uDFFF'" `shouldBe` Right (P.RuneLiteral $ P.LittleURuneValue "DFFF")
+      P.rawParse "'\\U00110000'" `shouldBe` Right (P.RuneLiteral $ P.BigURuneValue "00110000")
