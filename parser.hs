@@ -60,6 +60,7 @@ data LexicalElement = LineComment String
                     | Keyword String
                     | Operator String
                     | IntegerLiteral IntegerLiteral
+                    | FloatLiteral String String String
 
 instance Representable LexicalElement where
          represent (LineComment text) = "line comment: '" ++ text ++ "'"
@@ -68,6 +69,7 @@ instance Representable LexicalElement where
          represent (Keyword name) = "keyword: '" ++ name ++ "'"
          represent (Operator name) = "operator: '" ++ name ++ "'"
          represent (IntegerLiteral value) = "integer literal: '" ++ (represent value) ++ "'"
+         represent (FloatLiteral integer fractional exponent) = "float literal: '" ++ integer ++ "." ++ fractional ++ "e" ++ exponent ++ "'"
 
 -- Comments
 
@@ -127,14 +129,39 @@ hexLiteral = P.try $ do first <- P.char '0'
                         rest <- P.many hexDigit
                         return $ IntegerLiteral (Hex $ first:middle:rest)
 
+floatLiteral = a <|> b <|> c
+               where
+                 a = P.try $ do integer <- decimals
+                                P.char '.'
+                                fractional <- P.option "0" decimals
+                                exponent <- P.option "+0" exponentPart
+                                return $ FloatLiteral integer fractional exponent
+                 b = P.try $ do integer <- decimals
+                                exponent <- exponentPart
+                                return $ FloatLiteral integer "0" exponent
+                 c = P.try $ do P.char '.'
+                                fractional <- decimals
+                                exponent <- P.option "+0" exponentPart
+                                return $ FloatLiteral "0" fractional exponent
+
+decimals = P.try $ do first <- decimalDigit
+                      rest <- P.many decimalDigit
+                      return $ first:rest
+
+exponentPart = P.try $ do P.oneOf "eE"
+                          sign <- P.option '+' (P.oneOf "+-")
+                          rest <- decimals
+                          return $ sign:rest
+
 -- # Final syntax definition
 
 final = lineComment
     <|> generalComment
     <|> keyword
     <|> identifier
-    <|> operator
+    <|> floatLiteral
     <|> integerLiteral
+    <|> operator
 
 -- # Helpers
 
