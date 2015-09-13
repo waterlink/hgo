@@ -12,6 +12,12 @@ parse contents = case rawParse contents of
                       Left err -> "No match: " ++ show err
                       Right val -> "Parsed: " ++ (represent val)
 
+dbgParseAll contents = case parseAll contents of
+                            Left err -> "No match: " ++ show err
+                            Right val -> "Parsed: " ++ (represent val)
+
+parseAll contents = P.parse tokens "$STDIN" contents
+
 rawParse contents = P.parse final "$STDIN" contents
 
 -- # Source code representation
@@ -84,6 +90,9 @@ data LexicalElement = LineComment String
                     | ImaginaryFloatLiteral FloatLiteral
                     | RuneLiteral RuneValue
                     | StringLiteral [RuneValue]
+                    | Whitespace
+                    | Tokens [LexicalElement]
+                    | None
                     deriving (Eq, Show)
 
 instance Representable LexicalElement where
@@ -98,6 +107,9 @@ instance Representable LexicalElement where
          represent (ImaginaryFloatLiteral value) = "imaginary literal: '" ++ (represent value) ++ "'"
          represent (RuneLiteral value) = "rune: '" ++ (represent value) ++ "'"
          represent (StringLiteral value) = "string: [" ++ (intercalate ", " $ map represent value) ++ "]"
+         represent (Whitespace) = "whitespace"
+         represent (Tokens tokens) = "tokens: [" ++ (intercalate ", " $ map represent tokens) ++ "]"
+         represent (None) = "EOF reached"
 
 -- Comments
 
@@ -249,18 +261,33 @@ stringLiteral = rawString <|> interpretedString
                                                  runes <- P.manyTill (byteValue <|> unicodeValue) $ P.char '"'
                                                  return $ StringLiteral runes
 
+whitespace = do P.spaces
+                return $ Whitespace
+
+none = do P.eof
+          return $ None
+
 -- # Final syntax definition
 
-final = lineComment
-    <|> generalComment
-    <|> keyword
-    <|> identifier
-    <|> imaginaryLiteral
-    <|> floatLiteral
-    <|> integerLiteral
-    <|> operator
-    <|> stringLiteral
-    <|> runeLiteral
+final = whitespace >> (lineComment
+                   <|> generalComment
+                   <|> keyword
+                   <|> identifier
+                   <|> imaginaryLiteral
+                   <|> floatLiteral
+                   <|> integerLiteral
+                   <|> operator
+                   <|> stringLiteral
+                   <|> runeLiteral
+                   <|> none)
+
+tokens = do head <- final
+            case head of
+                 None -> return $ Tokens []
+                 _ -> do rest <- tokens
+                         case rest of
+                              Tokens tail -> return $ Tokens (head:tail)
+
 
 -- # Helpers
 

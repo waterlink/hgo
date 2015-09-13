@@ -109,3 +109,47 @@ main = hspec $ do
       P.rawParse "\"\\xff\\u00FF\"" `shouldBe` Right (P.StringLiteral [P.HexRuneValue "ff", P.LittleURuneValue "00FF"])
       P.rawParse "\"\\uD800\"" `shouldBe` Right (P.StringLiteral [P.LittleURuneValue "D800"])
       P.rawParse "\"\\U00110000\"" `shouldBe` Right (P.StringLiteral [P.BigURuneValue "00110000"])
+
+    it "handles whitespace correctly" $ do
+      P.rawParse "   hello   " `shouldBe` Right (P.Identifier "hello")
+
+  describe "parseAll" $ do
+    it "handles simple math expression" $ do
+      P.parseAll "2 + 2 == 4" `shouldBe` Right (P.Tokens [
+        P.IntegerLiteral $ P.Decimal "2",
+        P.Operator "+",
+        P.IntegerLiteral $ P.Decimal "2",
+        P.Operator "==",
+        P.IntegerLiteral $ P.Decimal "4"])
+
+    it "handles package definition" $ do
+      P.parseAll "package main" `shouldBe` Right (P.Tokens [
+        P.Keyword "package",
+        P.Identifier "main"])
+
+    it "handles an import" $ do
+      P.parseAll "import \"fmt\"" `shouldBe` Right (P.Tokens [
+        P.Keyword "import",
+        P.StringLiteral $ map P.CharRuneValue "fmt"])
+
+      P.parseAll "\n  import (\n\"fmt\"\n\"io\"\n)\n" `shouldBe` Right (P.Tokens [
+        P.Keyword "import",
+        P.Operator "(",
+        P.StringLiteral $ map P.CharRuneValue "fmt",
+        P.StringLiteral $ map P.CharRuneValue "io",
+        P.Operator ")"])
+
+    it "handles function definition" $ do
+      P.parseAll "func main() {\n  fmt.Println(\"Hello, World!\")\n}\n" `shouldBe` Right (P.Tokens [
+        P.Keyword "func",
+        P.Identifier "main",
+        P.Operator "(",
+        P.Operator ")",
+        P.Operator "{",
+        P.Identifier "fmt",
+        P.Operator ".",
+        P.Identifier "Println",
+        P.Operator "(",
+        P.StringLiteral $ map P.CharRuneValue "Hello, World!",
+        P.Operator ")",
+        P.Operator "}"])

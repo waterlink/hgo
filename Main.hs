@@ -7,6 +7,6 @@ import System.Exit
 import qualified Parser as P
 
 main = do contents <- getContents
-          let output = P.parse contents
+          let output = P.dbgParseAll contents
           putStrLn output
 
