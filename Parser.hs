@@ -298,15 +298,8 @@ tokens = do head <- final
                           ImaginaryFloatLiteral _ -> autoSemicolon
                           RuneLiteral _ -> autoSemicolon
                           StringLiteral _ -> autoSemicolon
-                          Keyword "break" -> autoSemicolon
-                          Keyword "continue" -> autoSemicolon
-                          Keyword "fallthrough" -> autoSemicolon
-                          Keyword "return" -> autoSemicolon
-                          Operator "++" -> autoSemicolon
-                          Operator "--" -> autoSemicolon
-                          Operator ")" -> autoSemicolon
-                          Operator "]" -> autoSemicolon
-                          Operator "}" -> autoSemicolon
+                          Keyword name | name `elem` ["break", "continue", "fallthrough", "return"] -> autoSemicolon
+                          Operator name | name `elem` ["++", "--", ")", "]", "}"] -> autoSemicolon
                           _ -> appendTokens
             fn head
             where
