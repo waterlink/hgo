@@ -1,9 +1,5 @@
-module Main where
+module Parser where
 
-import System.Environment
-import System.IO
-import Control.Monad
-import System.Exit
 import Data.List
 import Data.Ord
 
@@ -12,11 +8,9 @@ import Text.ParserCombinators.Parsec ((<|>))
 import qualified Text.ParserCombinators.Parsec as P
 import qualified Text.Parsec.String as PS
 
-main = do contents <- getContents
-          let output = case P.parse final "$STDIN" contents of
-                            Left err -> "No match: " ++ show err
-                            Right val -> "Parsed: " ++ (represent val)
-          putStrLn output
+parse contents = case P.parse final "$STDIN" contents of
+                      Left err -> "No match: " ++ show err
+                      Right val -> "Parsed: " ++ (represent val)
 
 -- # Source code representation
 
