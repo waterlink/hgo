@@ -20,7 +20,7 @@ rawParse contents = P.parse final "$STDIN" contents
 
 newline = P.newline
 
-unicodeChar = P.anyChar
+unicodeChar = P.noneOf "\n"
 
 unicodeLetter = P.letter
 
@@ -83,6 +83,7 @@ data LexicalElement = LineComment String
                     | ImaginaryIntegerLiteral IntegerLiteral
                     | ImaginaryFloatLiteral FloatLiteral
                     | RuneLiteral RuneValue
+                    | StringLiteral [RuneValue]
                     deriving (Eq, Show)
 
 instance Representable LexicalElement where
@@ -96,6 +97,7 @@ instance Representable LexicalElement where
          represent (ImaginaryIntegerLiteral value) = "imaginary literal: '" ++ (represent value) ++ "'"
          represent (ImaginaryFloatLiteral value) = "imaginary literal: '" ++ (represent value) ++ "'"
          represent (RuneLiteral value) = "rune: '" ++ (represent value) ++ "'"
+         represent (StringLiteral value) = "string: [" ++ (intercalate ", " $ map represent value) ++ "]"
 
 -- Comments
 
@@ -104,7 +106,7 @@ lineComment = do string "//"
                  return $ LineComment text
 
 generalComment = do string "/*"
-                    text <- P.manyTill unicodeChar (string "*/")
+                    text <- P.manyTill P.anyChar (string "*/")
                     return $ GeneralComment text
 
 -- Tokens
@@ -238,6 +240,15 @@ byteValue = octalByteValue <|> hexByteValue
                                         h2 <- hexDigit
                                         return $ HexRuneValue [h1, h2]
 
+stringLiteral = rawString <|> interpretedString
+                where
+                  rawString = P.try $ do P.char '`'
+                                         chars <- P.manyTill (P.noneOf "`") $ P.char '`'
+                                         return $ StringLiteral (map CharRuneValue chars)
+                  interpretedString = P.try $ do P.char '"'
+                                                 runes <- P.manyTill (byteValue <|> unicodeValue) $ P.char '"'
+                                                 return $ StringLiteral runes
+
 -- # Final syntax definition
 
 final = lineComment
@@ -248,6 +259,7 @@ final = lineComment
     <|> floatLiteral
     <|> integerLiteral
     <|> operator
+    <|> stringLiteral
     <|> runeLiteral
 
 -- # Helpers

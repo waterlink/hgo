@@ -94,3 +94,18 @@ main = hspec $ do
       -- should succeed:
       P.rawParse "'\\uDFFF'" `shouldBe` Right (P.RuneLiteral $ P.LittleURuneValue "DFFF")
       P.rawParse "'\\U00110000'" `shouldBe` Right (P.RuneLiteral $ P.BigURuneValue "00110000")
+
+    it "parses strings" $ do
+      P.rawParse "\"abc\"" `shouldBe` Right (P.StringLiteral $ map P.CharRuneValue "abc")
+      P.rawParse "`abc`" `shouldBe` Right (P.StringLiteral $ map P.CharRuneValue "abc")
+      P.rawParse "\"\\\\n\\n\\\\n\"" `shouldBe` Right (P.StringLiteral [P.EscapedCharRuneValue '\\', P.CharRuneValue 'n', P.EscapedCharRuneValue 'n', P.EscapedCharRuneValue '\\', P.CharRuneValue 'n'])
+      P.rawParse "`\\n\n\\n`" `shouldBe` Right (P.StringLiteral $ map P.CharRuneValue "\\n\n\\n")
+      P.rawParse "\"\\n\"" `shouldBe` Right (P.StringLiteral [P.EscapedCharRuneValue 'n'])
+      P.rawParse "`\"`" `shouldBe` Right (P.StringLiteral [P.CharRuneValue '"'])
+      P.rawParse "\"\\\"\"" `shouldBe` Right (P.StringLiteral [P.EscapedCharRuneValue '"'])
+      P.rawParse "\"Hello, world!\\n\"" `shouldBe` Right (P.StringLiteral $ (map P.CharRuneValue "Hello, world!") ++ [P.EscapedCharRuneValue 'n'])
+      P.rawParse "\"日本語\"" `shouldBe` Right (P.StringLiteral $ map P.CharRuneValue "日本語")
+      P.rawParse "\"\\u65e5本\\U00008a9e\"" `shouldBe` Right (P.StringLiteral [P.LittleURuneValue "65e5", P.CharRuneValue '本', P.BigURuneValue "00008a9e"])
+      P.rawParse "\"\\xff\\u00FF\"" `shouldBe` Right (P.StringLiteral [P.HexRuneValue "ff", P.LittleURuneValue "00FF"])
+      P.rawParse "\"\\uD800\"" `shouldBe` Right (P.StringLiteral [P.LittleURuneValue "D800"])
+      P.rawParse "\"\\U00110000\"" `shouldBe` Right (P.StringLiteral [P.BigURuneValue "00110000"])
