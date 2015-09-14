@@ -82,7 +82,7 @@ data UnaryOp
   | UnCaret   -- ^
   | Deref     -- *
   | Pointerof -- &
-  | CharRead  -- <-
+  | ChanRead  -- <-
 
 data TypeName
   = Identifier Identifier
