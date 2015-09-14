@@ -6,9 +6,11 @@ type SliceStart = Integer
 type SliceEnd = Integer
 type SliceStep = Integer
 type Ellipsis = ()
+type ArrayLength = Integer
+type ReadChannel = ()
+type WriteChannel = ()
 
 -- STUB
-type Type = String
 type FunctionSignature = String
 type FunctionBody = String
 type Receiver = String
@@ -82,11 +84,36 @@ data UnaryOp
   | Pointerof -- &
   | CharRead  -- <-
 
+data TypeName
+  = Identifier Identifier
+  | QualifiedIdentifier QualifiedIdentifier
+
 data Operand
   = Literal Literal
-  | Identifier Identifier
-  | QualifiedIdentifier QualifiedIdentifier
+  | OperandType TypeName
   | MethodExpr Type Identifier
   | Expression Expression
 
 data Conversion = TypeConversion Type Expression
+
+data Type
+  = TypeName TypeName
+  | TypeLiteral TypeLiteral
+
+data TypeLiteral
+  = ArrayType (Maybe ArrayLength) Type
+  | StructType [FieldDecl]
+  | PointerType Type
+  | FunctionType FunctionSignature
+  | InterfaceType [MethodSpec]
+  | SliceType Type
+  | MapType Type Type
+  | ChannelType Type (Maybe ReadChannel) (Maybe WriteChannel)
+
+data FieldDecl
+  = Field [Identifier] Type
+  | AnonymousField TypeName
+
+data MethodSpec
+  = Method Identifier FunctionSignature
+  | Interface TypeName
