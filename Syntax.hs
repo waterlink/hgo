@@ -13,24 +13,29 @@ type Receiver = [FunctionParameterDecl]
 type ImportDecl = [ImportSpec]
 
 data QualifiedIdentifier = Qualified Identifier Package
+  deriving (Eq, Ord, Show)
 
 data Declaration
   = ConstDecl [Identifier] (Maybe Type) [Expression]
   | TypeDecl Identifier Type
   | VarDecl [Identifier] (Maybe Type) [Expression]
+  deriving (Eq, Ord, Show)
 
 data TopLevelDecl
   = Declaration Declaration
   | FunctionDecl Identifier FunctionSignature (Maybe [Statement])
   | MethodDecl Receiver Identifier FunctionSignature (Maybe [Statement])
+  deriving (Eq, Ord, Show)
 
 data Expression
   = Unary UnaryExpr
   | Binary BinaryOp Expression Expression
+  deriving (Eq, Ord, Show)
 
 data UnaryExpr
   = PrimaryExpr PrimaryExpr
   | UnaryOp UnaryOp UnaryExpr
+  deriving (Eq, Ord, Show)
 
 data PrimaryExpr
   = Operand Operand
@@ -40,6 +45,7 @@ data PrimaryExpr
   | Slice PrimaryExpr (Maybe SliceStart) (Maybe SliceEnd) (Maybe SliceStep)
   | TypeAssertion PrimaryExpr Type
   | Arguments PrimaryExpr [Expression] (Maybe Type) (Maybe Ellipsis)
+  deriving (Eq, Ord, Show)
 
 data BinaryOp
   = Or        -- ||
@@ -47,6 +53,7 @@ data BinaryOp
   | RelOp
   | AddOp
   | MulOp
+  deriving (Eq, Ord, Show)
 
 data RelOp
   = Equals    -- ==
@@ -55,12 +62,14 @@ data RelOp
   | LessEq    -- <=
   | Greater   -- >
   | GreaterEq -- >=
+  deriving (Eq, Ord, Show)
 
 data AddOp
   = Plus      -- +
   | Minus     -- -
   | BitOr     -- |
   | BitXor    -- ^
+  deriving (Eq, Ord, Show)
 
 data MulOp
   = Mult      -- *
@@ -70,6 +79,7 @@ data MulOp
   | RShift    -- >>
   | BitAnd    -- &
   | AndXor    -- &^ - FIXME: no idea what is that
+  deriving (Eq, Ord, Show)
 
 data UnaryOp
   = UnPlus    -- +
@@ -79,22 +89,27 @@ data UnaryOp
   | Deref     -- *
   | Pointerof -- &
   | ChanRead  -- <-
+  deriving (Eq, Ord, Show)
 
 data TypeName
   = Identifier Identifier
   | QualifiedIdentifier QualifiedIdentifier
+  deriving (Eq, Ord, Show)
 
 data Operand
   = Literal Literal
   | OperandType TypeName
   | MethodExpr Type Identifier
   | Expression Expression
+  deriving (Eq, Ord, Show)
 
 data Conversion = TypeConversion Type Expression
+  deriving (Eq, Ord, Show)
 
 data Type
   = TypeName TypeName
   | TypeLiteral TypeLiteral
+  deriving (Eq, Ord, Show)
 
 data TypeLiteral
   = ArrayType ArrayLength Type
@@ -105,22 +120,28 @@ data TypeLiteral
   | SliceType Type
   | MapType Type Type
   | ChannelType Type (Maybe ReadChannel) (Maybe WriteChannel)
+  deriving (Eq, Ord, Show)
 
 data FieldDecl
   = Field [Identifier] Type
   | AnonymousField TypeName
+  deriving (Eq, Ord, Show)
 
 data MethodSpec
   = Method Identifier FunctionSignature
   | Interface TypeName
+  deriving (Eq, Ord, Show)
 
 data FunctionSignature = Signature [FunctionParameterDecl] (Maybe FunctionResult)
+  deriving (Eq, Ord, Show)
 
 data FunctionParameterDecl = ParameterDecl [Identifier] Type (Maybe Ellipsis)
+  deriving (Eq, Ord, Show)
 
 data FunctionResult
   = FunctionTupleResult [FunctionParameterDecl]
   | FunctionSingleResult Type
+  deriving (Eq, Ord, Show)
 
 data Statement
   = DeclarationStmt Declaration
@@ -138,6 +159,7 @@ data Statement
   | SelectStmt [CommClauseStmt]
   | ForStmt ForStmt
   | DeferStmt Expression
+  deriving (Eq, Ord, Show)
 
 data SimpleStmt
   = Empty
@@ -147,57 +169,73 @@ data SimpleStmt
   | DecStmt Expression
   | AssignmentStmt [Expression] AssignOp [Expression]
   | ShortVarDeclStmt [Identifier] [Expression]
+  deriving (Eq, Ord, Show)
 
 data IfStmt = If (Maybe SimpleStmt) Expression [Statement] (Maybe ElseStmt)
+  deriving (Eq, Ord, Show)
 
 data ElseStmt
   = ElseIf IfStmt
   | Else [Statement]
+  deriving (Eq, Ord, Show)
 
 data SwitchStmt
   = ExprSwitchStmt (Maybe SimpleStmt) (Maybe Expression) [ExprCaseClauseStmt]
   | TypeSwitchStmt (Maybe SimpleStmt) TypeSwitchGuardStmt [TypeCaseClauseStmt]
+  deriving (Eq, Ord, Show)
 
 data ExprCaseClauseStmt
   = ExprCaseClause [Expression] [Statement]
   | DefaultCaseClause [Statement]
+  deriving (Eq, Ord, Show)
 
 data TypeSwitchGuardStmt = TypeSwitchGuard (Maybe Identifier) PrimaryExpr
+  deriving (Eq, Ord, Show)
 
 data TypeCaseClauseStmt
   = TypeCaseClause [Type] [Statement]
   | DefaultTypeCaseClause [Statement]
+  deriving (Eq, Ord, Show)
 
 data CommClauseStmt = CommClause CommCaseStmt [Statement]
+  deriving (Eq, Ord, Show)
 
 data CommCaseStmt
   = SendCommClause SendStmt
   | RecvCommClause RecvStmt
   | DefaultCommClause
+  deriving (Eq, Ord, Show)
 
 data SendStmt = Send Expression Expression
+  deriving (Eq, Ord, Show)
 
 data RecvStmt = Recv RecvTarget Expression
+  deriving (Eq, Ord, Show)
 
 data RecvTarget
   = RecvAssignment [Expression]
   | RecvShortVarDecl [Identifier]
+  deriving (Eq, Ord, Show)
 
 data ForStmt = For ForDefinition [Statement]
+  deriving (Eq, Ord, Show)
 
 data ForDefinition
   = Condition Expression
   | ForClause (Maybe SimpleStmt) (Maybe Expression) (Maybe SimpleStmt)
   | RangeClause RangeTarget Expression
+  deriving (Eq, Ord, Show)
 
 data RangeTarget
   = RangeAssignment [Expression]
   | RangeShortVarDecl [Identifier]
+  deriving (Eq, Ord, Show)
 
 data AssignOp
   = AssignAddOp AddOp
   | AssignMulOp MulOp
   | Assign
+  deriving (Eq, Ord, Show)
 
 data Literal
   = IntLiteral Integer
@@ -207,6 +245,7 @@ data Literal
   | StringLiteral String
   | CompositeLiteral LiteralType LiteralValue
   | FunctionLiteral FunctionSignature [Statement]
+  deriving (Eq, Ord, Show)
 
 data LiteralType
   = StructTypeLiteral [FieldDecl]
@@ -215,20 +254,27 @@ data LiteralType
   | SliceTypeLiteral Type
   | MapTypeLiteral Type Type
   | TypeNameLiteral TypeName
+  deriving (Eq, Ord, Show)
 
 data LiteralValue = LiteralValue [LiteralElement]
+  deriving (Eq, Ord, Show)
 
 data LiteralElement = LiteralElement (Maybe LiteralKey) Value
+  deriving (Eq, Ord, Show)
 
 data LiteralKey
   = FieldName Identifier
   | KeyExpr Expression
   | KeyLiteralValue LiteralValue
+  deriving (Eq, Ord, Show)
 
 data Value
   = ValueExpr Expression
   | ValueLiteralValue LiteralValue
+  deriving (Eq, Ord, Show)
 
 data SourceFile = SourceFile Identifier [ImportDecl] [TopLevelDecl]
+  deriving (Eq, Ord, Show)
 
 data ImportSpec = ImportSpec Identifier String
+  deriving (Eq, Ord, Show)
