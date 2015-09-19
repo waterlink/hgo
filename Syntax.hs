@@ -9,10 +9,10 @@ type Ellipsis = ()
 type ArrayLength = Integer
 type ReadChannel = ()
 type WriteChannel = ()
+type Receiver = [FunctionParameterDecl]
 
 -- STUB
 type FunctionBody = String
-type Receiver = String
 type Literal = String
 
 data QualifiedIdentifier = Qualified Identifier Package
@@ -121,4 +121,6 @@ data FunctionSignature = Signature [FunctionParameterDecl] (Maybe FunctionResult
 
 data FunctionParameterDecl = ParameterDecl [Identifier] Type (Maybe Ellipsis)
 
-data FunctionResult = FunctionTupleResult [FunctionParameterDecl] | FunctionSingleResult Type
+data FunctionResult
+  = FunctionTupleResult [FunctionParameterDecl]
+  | FunctionSingleResult Type
