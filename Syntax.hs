@@ -9,7 +9,6 @@ type Ellipsis = ()
 type ArrayLength = Integer
 type ReadChannel = ()
 type WriteChannel = ()
-type FunctionParameters = [FunctionParameterDecl]
 
 -- STUB
 type FunctionBody = String
@@ -118,8 +117,8 @@ data MethodSpec
   = Method Identifier FunctionSignature
   | Interface TypeName
 
-data FunctionSignature = Signature FunctionParameters (Maybe FunctionResult)
+data FunctionSignature = Signature [FunctionParameterDecl] (Maybe FunctionResult)
 
 data FunctionParameterDecl = ParameterDecl [Identifier] Type (Maybe Ellipsis)
 
-data FunctionResult = FunctionParameters | Type
+data FunctionResult = FunctionTupleResult [FunctionParameterDecl] | FunctionSingleResult Type
