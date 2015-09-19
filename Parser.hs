@@ -57,15 +57,30 @@ contents p = do
   eof
   return r
 
+paramdecllist = try (L.parens $ L.commaSep paramdecl)
+
+-- FIXME: add support for:
+-- - type literals
+resultType :: Parser (Maybe S.FunctionResult)
+resultType = tuple <|> single <|> nothing
+  where
+    tuple = do
+      values <- paramdecllist
+      return $ Just (S.FunctionTupleResult values)
+    single = do
+      value <- typeNameWithoutEllipsis
+      return $ Just (S.FunctionSingleResult $ S.TypeName value)
+    nothing = return Nothing
+
 -- FIXME: add support for:
 -- - body
--- - return value(s)
 topfundecl :: Parser S.TopLevelDecl
 topfundecl = do
   L.keyword "func"
   name <- L.identifier
-  args <- L.parens $ L.commaSep paramdecl
-  return $ S.FunctionDecl name (S.Signature args Nothing) Nothing
+  args <- paramdecllist
+  result <- resultType
+  return $ S.FunctionDecl name (S.Signature args result) Nothing
 
 topdecl :: Parser S.TopLevelDecl
 topdecl = try topfundecl
