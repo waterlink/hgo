@@ -68,5 +68,9 @@ imaginary = a <|> b
                    P.char 'i'
                    return $ 0 :+ value
 
+parens = Tok.parens lexer
+commaSep = Tok.commaSep lexer
+semiSep = Tok.semiSep lexer
+
 -- parse
 parse parser contents = P.parse parser "$STDIN" contents

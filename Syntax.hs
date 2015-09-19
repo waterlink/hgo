@@ -12,7 +12,7 @@ type WriteChannel = ()
 type Receiver = [FunctionParameterDecl]
 type ImportDecl = [ImportSpec]
 
-data QualifiedIdentifier = Qualified Identifier Package
+data QualifiedIdentifier = Qualified Package Identifier
   deriving (Eq, Ord, Show)
 
 data Declaration
@@ -95,6 +95,8 @@ data TypeName
   = Identifier Identifier
   | QualifiedIdentifier QualifiedIdentifier
   deriving (Eq, Ord, Show)
+
+data TypeNameWithEllipsis = TypeNameWithEllipsis TypeName (Maybe Ellipsis)
 
 data Operand
   = Literal Literal

@@ -1,12 +1,20 @@
 module Main where
 
-import System.Environment
-import System.IO
-import System.Exit
+import Parser
 
-import qualified Lexer as L
+import Control.Monad.Trans
+import System.Console.Haskeline
 
-main = do contents <- getContents
-          let output = L.dbgParseAll contents
-          putStrLn output
+process line = do
+  let res = parseTopLevel line
+  case res of
+    Left err -> print err
+    Right ex -> mapM_ print ex
 
+main = runInputT defaultSettings loop
+  where
+    loop = do
+      minput <- getInputLine "ready> "
+      case minput of
+        Nothing -> outputStrLn "Goodbye."
+        Just input -> (liftIO $ process input) >> loop
