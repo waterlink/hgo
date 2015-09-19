@@ -12,7 +12,6 @@ type WriteChannel = ()
 type Receiver = [FunctionParameterDecl]
 
 -- STUB
-type FunctionBody = String
 type Literal = String
 
 data QualifiedIdentifier = Qualified Identifier Package
@@ -24,8 +23,8 @@ data Declaration
 
 data TopLevelDecl
   = Declaration Declaration
-  | FunctionDecl Identifier FunctionSignature (Maybe FunctionBody)
-  | MethodDecl Receiver Identifier FunctionSignature (Maybe FunctionBody)
+  | FunctionDecl Identifier FunctionSignature (Maybe [Statement])
+  | MethodDecl Receiver Identifier FunctionSignature (Maybe [Statement])
 
 data Expression
   = Unary UnaryExpr
@@ -124,3 +123,80 @@ data FunctionParameterDecl = ParameterDecl [Identifier] Type (Maybe Ellipsis)
 data FunctionResult
   = FunctionTupleResult [FunctionParameterDecl]
   | FunctionSingleResult Type
+
+data Statement
+  = DeclarationStmt Declaration
+  | LabeledStmt Identifier Statement
+  | SimpleStmt SimpleStmt
+  | GoStmt Expression
+  | ReturnStmt [Expression]
+  | BreakStmt (Maybe Identifier)
+  | ContinueStmt (Maybe Identifier)
+  | GotoStmt Identifier
+  | FallthroughStmt
+  | Block [Statement]
+  | IfStmt IfStmt
+  | SwitchStmt SwitchStmt
+  | SelectStmt [CommClauseStmt]
+  | ForStmt ForStmt
+  | DeferStmt Expression
+
+data SimpleStmt
+  = Empty
+  | ExpressionStmt Expression
+  | SendStmt SendStmt
+  | IncStmt Expression
+  | DecStmt Expression
+  | AssignmentStmt [Expression] AssignOp [Expression]
+  | ShortVarDeclStmt [Identifier] [Expression]
+
+data IfStmt = If (Maybe SimpleStmt) Expression [Statement] (Maybe ElseStmt)
+
+data ElseStmt
+  = ElseIf IfStmt
+  | Else [Statement]
+
+data SwitchStmt
+  = ExprSwitchStmt (Maybe SimpleStmt) (Maybe Expression) [ExprCaseClauseStmt]
+  | TypeSwitchStmt (Maybe SimpleStmt) TypeSwitchGuardStmt [TypeCaseClauseStmt]
+
+data ExprCaseClauseStmt
+  = ExprCaseClause [Expression] [Statement]
+  | DefaultCaseClause [Statement]
+
+data TypeSwitchGuardStmt = TypeSwitchGuard (Maybe Identifier) PrimaryExpr
+
+data TypeCaseClauseStmt
+  = TypeCaseClause [Type] [Statement]
+  | DefaultTypeCaseClause [Statement]
+
+data CommClauseStmt = CommClause CommCaseStmt [Statement]
+
+data CommCaseStmt
+  = SendCommClause SendStmt
+  | RecvCommClause RecvStmt
+  | DefaultCommClause
+
+data SendStmt = Send Expression Expression
+
+data RecvStmt = Recv RecvTarget Expression
+
+data RecvTarget
+  = RecvAssignment [Expression]
+  | RecvShortVarDecl [Identifier]
+
+data ForStmt = For ForDefinition [Statement]
+
+data ForDefinition
+  = Condition Expression
+  | ForClause (Maybe SimpleStmt) (Maybe Expression) (Maybe SimpleStmt)
+  | RangeClause RangeTarget Expression
+
+data RangeTarget
+  = RangeAssignment [Expression]
+  | RangeShortVarDecl [Identifier]
+
+data AssignOp
+  = AssignAddOp AddOp
+  | AssignMulOp MulOp
+  | Assign
