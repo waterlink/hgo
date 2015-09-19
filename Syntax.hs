@@ -11,9 +11,6 @@ type ReadChannel = ()
 type WriteChannel = ()
 type Receiver = [FunctionParameterDecl]
 
--- STUB
-type Literal = String
-
 data QualifiedIdentifier = Qualified Identifier Package
 
 data Declaration
@@ -99,7 +96,7 @@ data Type
   | TypeLiteral TypeLiteral
 
 data TypeLiteral
-  = ArrayType (Maybe ArrayLength) Type
+  = ArrayType ArrayLength Type
   | StructType [FieldDecl]
   | PointerType Type
   | FunctionType FunctionSignature
@@ -200,3 +197,33 @@ data AssignOp
   = AssignAddOp AddOp
   | AssignMulOp MulOp
   | Assign
+
+data Literal
+  = IntLiteral Integer
+  | FloatLiteral Double
+  | ImaginaryLiteral Double
+  | RuneLiteral Char
+  | StringLiteral String
+  | CompositeLiteral LiteralType LiteralValue
+  | FunctionLiteral FunctionSignature [Statement]
+
+data LiteralType
+  = StructTypeLiteral [FieldDecl]
+  | ArrayTypeLiteral ArrayLength Type
+  | AutoSizeArrayTypeLiteral Type
+  | SliceTypeLiteral Type
+  | MapTypeLiteral Type Type
+  | TypeNameLiteral TypeName
+
+data LiteralValue = LiteralValue [LiteralElement]
+
+data LiteralElement = LiteralElement (Maybe LiteralKey) Value
+
+data LiteralKey
+  = FieldName Identifier
+  | KeyExpr Expression
+  | KeyLiteralValue LiteralValue
+
+data Value
+  = ValueExpr Expression
+  | ValueLiteralValue LiteralValue
