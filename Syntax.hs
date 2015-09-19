@@ -10,6 +10,7 @@ type ArrayLength = Integer
 type ReadChannel = ()
 type WriteChannel = ()
 type Receiver = [FunctionParameterDecl]
+type ImportDecl = [ImportSpec]
 
 data QualifiedIdentifier = Qualified Identifier Package
 
@@ -227,3 +228,7 @@ data LiteralKey
 data Value
   = ValueExpr Expression
   | ValueLiteralValue LiteralValue
+
+data SourceFile = SourceFile Identifier [ImportDecl] [TopLevelDecl]
+
+data ImportSpec = ImportSpec Identifier String
