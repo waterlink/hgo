@@ -96,7 +96,7 @@ data TypeName
   | QualifiedIdentifier QualifiedIdentifier
   deriving (Eq, Ord, Show)
 
-data TypeNameWithEllipsis = TypeNameWithEllipsis TypeName (Maybe Ellipsis)
+data TypeWithEllipsis = TypeWithEllipsis Type (Maybe Ellipsis)
 
 data Operand
   = Literal Literal

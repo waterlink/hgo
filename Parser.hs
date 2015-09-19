@@ -16,8 +16,8 @@ qualifiedIdentifier = do
   name <- L.identifier
   return $ S.Qualified package name
 
-typeNameWithoutEllipsis :: Parser S.TypeName
-typeNameWithoutEllipsis = qualified <|> identifier
+typeName :: Parser S.TypeName
+typeName = qualified <|> identifier
   where
     identifier = try $ do
       name <- L.identifier
@@ -26,29 +26,85 @@ typeNameWithoutEllipsis = qualified <|> identifier
       name <- qualifiedIdentifier
       return $ S.QualifiedIdentifier name
 
-typeName :: Parser S.TypeNameWithEllipsis
-typeName = withEllipsis <|> without
+typeWithEllipsis :: Parser S.TypeWithEllipsis
+typeWithEllipsis = withEllipsis <|> without
   where
     withEllipsis = try $ do
       L.operator "..."
-      name <- typeNameWithoutEllipsis
-      return $ S.TypeNameWithEllipsis name (Just ())
+      value <- fullTypeValue
+      return $ S.TypeWithEllipsis value (Just ())
     without = try $ do
-      name <- typeNameWithoutEllipsis
-      return $ S.TypeNameWithEllipsis name Nothing
+      value <- fullTypeValue
+      return $ S.TypeWithEllipsis value Nothing
+
+fullTypeValue :: Parser S.Type
+fullTypeValue = name <|> literal
+  where
+    name = do
+      value <- typeName
+      return $ S.TypeName value
+    literal = do
+      value <- typeLiteral
+      return $ S.TypeLiteral value
 
 -- FIXME: add support for:
--- - type literals
+-- - struct
+-- - interface
+-- - function
+typeLiteral :: Parser S.TypeLiteral
+typeLiteral
+    = array
+  <|> pointer
+  <|> slice
+  <|> map
+  <|> channelro
+  <|> channelwo
+  <|> channelrw
+  where
+    -- FIXME: support expressions inside of [ ... ]
+    array = try $ do
+      size <- L.brackets L.integer
+      value <- fullTypeValue
+      return $ S.ArrayType size value 
+    pointer = try $ do
+      L.operator "*"
+      value <- fullTypeValue
+      return $ S.PointerType value
+    slice = try $ do
+      L.operator "["
+      L.operator "]"
+      value <- fullTypeValue
+      return $ S.SliceType value
+    map = try $ do
+      L.keyword "map"
+      key <- L.brackets fullTypeValue
+      value <- fullTypeValue
+      return $ S.MapType key value
+    channelro = try $ do
+      L.operator "<-"
+      L.keyword "chan"
+      value <- fullTypeValue
+      return $ S.ChannelType value (Just ()) Nothing
+    channelwo = try $ do
+      L.keyword "chan"
+      L.operator "<-"
+      value <- fullTypeValue
+      return $ S.ChannelType value Nothing (Just ())
+    channelrw = try $ do
+      L.keyword "chan"
+      value <- fullTypeValue
+      return $ S.ChannelType value (Just ()) (Just ())
+
 paramdecl :: Parser S.FunctionParameterDecl
 paramdecl = withName <|> without
   where
     withName = try $ do
       names <- L.commaSep L.identifier
-      S.TypeNameWithEllipsis typeValue ellipsis <- typeName
-      return $ S.ParameterDecl names (S.TypeName typeValue) ellipsis
+      S.TypeWithEllipsis typeValue ellipsis <- typeWithEllipsis
+      return $ S.ParameterDecl names typeValue ellipsis
     without = try $ do
-      S.TypeNameWithEllipsis typeValue ellipsis <- typeName
-      return $ S.ParameterDecl [] (S.TypeName typeValue) ellipsis
+      S.TypeWithEllipsis typeValue ellipsis <- typeWithEllipsis
+      return $ S.ParameterDecl [] typeValue ellipsis
 
 contents :: Parser a -> Parser a
 contents p = do
@@ -57,10 +113,9 @@ contents p = do
   eof
   return r
 
+paramdecllist :: Parser [S.FunctionParameterDecl]
 paramdecllist = try (L.parens $ L.commaSep paramdecl)
 
--- FIXME: add support for:
--- - type literals
 resultType :: Parser (Maybe S.FunctionResult)
 resultType = tuple <|> single <|> nothing
   where
@@ -68,8 +123,8 @@ resultType = tuple <|> single <|> nothing
       values <- paramdecllist
       return $ Just (S.FunctionTupleResult values)
     single = do
-      value <- typeNameWithoutEllipsis
-      return $ Just (S.FunctionSingleResult $ S.TypeName value)
+      value <- fullTypeValue
+      return $ Just (S.FunctionSingleResult value)
     nothing = return Nothing
 
 -- FIXME: add support for:

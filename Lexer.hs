@@ -69,6 +69,7 @@ imaginary = a <|> b
                    return $ 0 :+ value
 
 parens = Tok.parens lexer
+brackets = Tok.brackets lexer
 commaSep = Tok.commaSep lexer
 semiSep = Tok.semiSep lexer
 
