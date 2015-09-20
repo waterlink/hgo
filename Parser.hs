@@ -336,8 +336,7 @@ simplestmt
 -- - for stmt
 statement :: Parser S.Statement
 statement
-    = simple
-  <|> gostmt
+    = gostmt
   <|> returnstmt
   <|> breakstmtWithLabel
   <|> breakstmt
@@ -346,6 +345,7 @@ statement
   <|> fallthroughstmt
   <|> blockstmt
   <|> deferstmt
+  <|> simple
   where
     gostmt = try $ do
       L.keyword "go"
@@ -524,9 +524,9 @@ literalExpr = basic <|> composite
       return $ S.StringLiteral value
 
     basic :: Parser S.Literal
-    basic = integer
-        <|> float
+    basic = float
         <|> imaginary
+        <|> integer
         <|> rune
         <|> string
 
