@@ -100,9 +100,14 @@ data TypeWithEllipsis = TypeWithEllipsis Type (Maybe Ellipsis)
 
 data Operand
   = Literal Literal
-  | OperandType TypeName
+  | OperandName OperandName
   | MethodExpr Type Identifier
   | Expression Expression
+  deriving (Eq, Ord, Show)
+
+data OperandName
+  = OperandIdentifier Identifier
+  | OperandQualified QualifiedIdentifier
   deriving (Eq, Ord, Show)
 
 data Conversion = TypeConversion Type Expression

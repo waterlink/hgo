@@ -57,6 +57,7 @@ operator = Tok.reservedOp lexer
 integer = Tok.integer lexer
 float = Tok.float lexer
 char = Tok.charLiteral lexer
+rune = char
 string = Tok.stringLiteral lexer
 
 imaginary = a <|> b
@@ -70,6 +71,7 @@ imaginary = a <|> b
 
 parens = Tok.parens lexer
 brackets = Tok.brackets lexer
+braces = Tok.braces lexer
 commaSep = Tok.commaSep lexer
 semiSep = Tok.semiSep lexer
 
