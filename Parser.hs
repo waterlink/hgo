@@ -10,10 +10,13 @@ import qualified Lexer as L
 import qualified Syntax as S
 
 newUnaryOp :: S.UnaryOp -> S.Expression -> S.Expression
-newUnaryOp f e = S.Unary $ S.UnaryOp f e
+newUnaryOp f e = S.Unary (S.UnaryOpExpr f e)
 
-binary s f assoc = Ex.Infix (L.operator s >> return (S.Binary f)) assoc
 unary s f = Ex.Prefix (L.operator s >> return (newUnaryOp f))
+binary s f assoc = Ex.Infix (L.operator s >> return (S.Binary f)) assoc
+binaryMul s f assoc = Ex.Infix (L.operator s >> return (S.Binary $ S.MulBinOp f)) assoc
+binaryAdd s f assoc = Ex.Infix (L.operator s >> return (S.Binary $ S.AddBinOp f)) assoc
+binaryRel s f assoc = Ex.Infix (L.operator s >> return (S.Binary $ S.RelBinOp f)) assoc
 
 opTable = [[unary "+" S.UnPlus,
             unary "-" S.UnMinus,
@@ -23,25 +26,25 @@ opTable = [[unary "+" S.UnPlus,
             unary "&" S.Pointerof,
             unary "<-" S.ChanRead],
 
-           [binary "*" S.Mult Ex.AssocLeft,
-            binary "/" S.Div Ex.AssocLeft,
-            binary "%" S.Mod Ex.AssocLeft,
-            binary "<<" S.LShift Ex.AssocLeft,
-            binary ">>" S.RShift Ex.AssocLeft,
-            binary "&" S.BitAnd Ex.AssocLeft,
-            binary "&^" S.AndXor Ex.AssocLeft],
+           [binaryMul "*" S.Mult Ex.AssocLeft,
+            binaryMul "/" S.Div Ex.AssocLeft,
+            binaryMul "%" S.Mod Ex.AssocLeft,
+            binaryMul "<<" S.LShift Ex.AssocLeft,
+            binaryMul ">>" S.RShift Ex.AssocLeft,
+            binaryMul "&" S.BitAnd Ex.AssocLeft,
+            binaryMul "&^" S.AndXor Ex.AssocLeft],
 
-           [binary "+" S.Plus Ex.AssocLeft,
-            binary "-" S.Minus Ex.AssocLeft,
-            binary "|" S.BitOr Ex.AssocLeft,
-            binary "^" S.BitXor Ex.AssocLeft],
+           [binaryAdd "+" S.Plus Ex.AssocLeft,
+            binaryAdd "-" S.Minus Ex.AssocLeft,
+            binaryAdd "|" S.BitOr Ex.AssocLeft,
+            binaryAdd "^" S.BitXor Ex.AssocLeft],
 
-           [binary "==" S.Equals Ex.AssocLeft,
-            binary "!=" S.NotEquals Ex.AssocLeft,
-            binary "<" S.Less Ex.AssocLeft,
-            binary "<=" S.LessEq Ex.AssocLeft,
-            binary ">" S.Greater Ex.AssocLeft,
-            binary ">=" S.GreaterEq Ex.AssocLeft],
+           [binaryRel "==" S.Equals Ex.AssocLeft,
+            binaryRel "!=" S.NotEquals Ex.AssocLeft,
+            binaryRel "<" S.Less Ex.AssocLeft,
+            binaryRel "<=" S.LessEq Ex.AssocLeft,
+            binaryRel ">" S.Greater Ex.AssocLeft,
+            binaryRel ">=" S.GreaterEq Ex.AssocLeft],
 
            [binary "&&" S.And Ex.AssocLeft],
 
@@ -87,6 +90,48 @@ fullTypeValue = name <|> literal
 
 -- FIXME: add support for:
 -- - struct
+literalType :: Parser S.LiteralType
+literalType
+    = array
+  <|> autoarray
+  <|> slice
+  <|> map
+  <|> name
+
+  where
+    array :: Parser S.LiteralType
+    array = try $ do
+      size <- L.brackets L.integer
+      value <- fullTypeValue
+      return $ S.ArrayTypeLiteral size value 
+
+    autoarray :: Parser S.LiteralType
+    autoarray = try $ do
+      L.brackets $ L.operator "..."
+      value <- fullTypeValue
+      return $ S.AutoSizeArrayTypeLiteral value 
+
+    slice :: Parser S.LiteralType
+    slice = try $ do
+      L.operator "["
+      L.operator "]"
+      value <- fullTypeValue
+      return $ S.SliceTypeLiteral value
+
+    map :: Parser S.LiteralType
+    map = try $ do
+      L.keyword "map"
+      key <- L.brackets fullTypeValue
+      value <- fullTypeValue
+      return $ S.MapTypeLiteral key value
+
+    name :: Parser S.LiteralType
+    name = try $ do
+      value <- typeName
+      return $ S.TypeNameLiteral value
+
+-- FIXME: add support for:
+-- - struct
 -- - interface
 -- - function
 typeLiteral :: Parser S.TypeLiteral
@@ -104,30 +149,36 @@ typeLiteral
       size <- L.brackets L.integer
       value <- fullTypeValue
       return $ S.ArrayType size value 
+
     pointer = try $ do
       L.operator "*"
       value <- fullTypeValue
       return $ S.PointerType value
+
     slice = try $ do
       L.operator "["
       L.operator "]"
       value <- fullTypeValue
       return $ S.SliceType value
+
     map = try $ do
       L.keyword "map"
       key <- L.brackets fullTypeValue
       value <- fullTypeValue
       return $ S.MapType key value
+
     channelro = try $ do
       L.operator "<-"
       L.keyword "chan"
       value <- fullTypeValue
       return $ S.ChannelType value (Just ()) Nothing
+
     channelwo = try $ do
       L.keyword "chan"
       L.operator "<-"
       value <- fullTypeValue
       return $ S.ChannelType value Nothing (Just ())
+
     channelrw = try $ do
       L.keyword "chan"
       value <- fullTypeValue
@@ -184,24 +235,37 @@ addOp = plus <|> minus <|> or <|> xor
 mulOp :: Parser S.MulOp
 mulOp = mult <|> div <|> mod <|> lshift <|> rshift <|> and <|> andxor
   where
+    mult :: Parser S.MulOp
     mult = try $ do
       L.operator "*"
       return S.Mult
+
+    div :: Parser S.MulOp
     div = try $ do
       L.operator "/"
       return S.Div
+
+    mod :: Parser S.MulOp
     mod = try $ do
       L.operator "%"
       return S.Mod
+
+    lshift :: Parser S.MulOp
     lshift = try $ do
       L.operator "<<"
       return S.LShift
+
+    rshift :: Parser S.MulOp
     rshift = try $ do
       L.operator ">>"
       return S.RShift
+
+    and :: Parser S.MulOp
     and = try $ do
       L.operator "&"
-      return S.And
+      return S.BitAnd
+
+    andxor :: Parser S.MulOp
     andxor = try $ do
       L.operator "&^"
       return S.AndXor
@@ -322,13 +386,13 @@ statement
 expression :: Parser S.Expression
 expression = Ex.buildExpressionParser opTable exprFactor
 
-maybeExpr :: Parser (Maybe S.Expression)
-maybeExpr = option Nothing $ do
-  value <- expression
-  return $ Just value
-
 exprFactor :: Parser S.Expression
-exprFactor
+exprFactor = try $ do
+  value <- primaryExpr
+  return $ S.Unary (S.PrimaryExpr value)
+
+primaryExpr :: Parser S.PrimaryExpr
+primaryExpr
     = operandExpr
   <|> conversion
   <|> selector
@@ -339,50 +403,57 @@ exprFactor
   <|> arguments
 
   where
+    operandExpr :: Parser S.PrimaryExpr
     operandExpr = try $ do
       value <- operand
       return $ S.Operand value
 
+    conversion :: Parser S.PrimaryExpr
     conversion = try $ do
       typeValue <- fullTypeValue
       L.operator "("
       value <- expression
       optional $ L.operator ","
       L.operator ")"
-      return $ S.Conversion typeValue value
+      return $ S.Conversion (S.TypeConversion typeValue value)
 
+    selector :: Parser S.PrimaryExpr
     selector = try $ do
-      value <- expression
+      value <- primaryExpr
       L.operator "."
       name <- L.identifier
       return $ S.Selector value name
 
+    index :: Parser S.PrimaryExpr
     index = try $ do
-      value <- expression
+      value <- primaryExpr
       indexValue <- L.brackets expression
-      return $ S.Index value expression
+      return $ S.Index value indexValue
 
+    slice :: Parser S.PrimaryExpr
     slice = try $ do
-      value <- expression
+      value <- primaryExpr
       L.operator "["
-      start <- maybeExpr
+      start <- optionMaybe L.integer
       L.operator ":"
-      end <- maybeExpr
+      end <- optionMaybe L.integer
       L.operator "]"
       return $ S.Slice value start end Nothing
 
+    sliceWithStep :: Parser S.PrimaryExpr
     sliceWithStep = try $ do
-      value <- expression
+      value <- primaryExpr
       L.operator "["
-      start <- maybeExpr
+      start <- optionMaybe L.integer
       L.operator ":"
-      end <- expression
+      end <- L.integer
       L.operator ":"
-      step <- expression
+      step <- L.integer
       return $ S.Slice value start (Just end) (Just step)
 
+    typeAssertion :: Parser S.PrimaryExpr
     typeAssertion = try $ do
-      value <- expression
+      value <- primaryExpr
       L.operator "."
       typeValue <- L.parens fullTypeValue
       return $ S.TypeAssertion value typeValue
@@ -390,68 +461,83 @@ exprFactor
     -- FIXME:
     -- - figure out what Type can do here (see go's RFC)
     -- - add support for Ellipsis
+    arguments :: Parser S.PrimaryExpr
     arguments = try $ do
-      value <- expression
+      value <- primaryExpr
       args <- L.parens $ L.commaSep expression
       return $ S.Arguments value args Nothing Nothing
 
 operand :: Parser S.Operand
 operand = literal <|> name <|> qualifiedName <|> methodExpr <|> exprInParens
   where
+    literal :: Parser S.Operand
     literal = try $ do
       value <- literalExpr
       return $ S.Literal value
 
+    name :: Parser S.Operand
     name = try $ do
       value <- L.identifier
       return $ S.OperandName (S.OperandIdentifier value)
 
+    qualifiedName :: Parser S.Operand
     qualifiedName = try $ do
       value <- qualifiedIdentifier
       return $ S.OperandName (S.OperandQualified value)
 
     -- FIXME: add support for "(" ReceiverType ")"
     -- FIXME: currently allows all type literals, but shouldn't ?
+    methodExpr :: Parser S.Operand
     methodExpr = try $ do
       typeValue <- fullTypeValue
       L.operator "."
       name <- L.identifier
       return $ S.MethodExpr typeValue name
 
-    exprInParens = try $ L.parens expression
+    exprInParens :: Parser S.Operand
+    exprInParens = try $ do
+      value <- L.parens expression
+      return $ S.ExpressionInParens value
 
 -- FIXME: add support for function literal
 literalExpr :: Parser S.Literal
 literalExpr = basic <|> composite
   where
+    integer :: Parser S.Literal
     integer = try $ do
       value <- L.integer
       return $ S.IntLiteral value
 
+    float :: Parser S.Literal
     float = try $ do
       value <- L.float
       return $ S.FloatLiteral value
 
+    imaginary :: Parser S.Literal
     imaginary = try $ do
       value <- L.imaginary
       return $ S.ImaginaryLiteral value
 
+    rune :: Parser S.Literal
     rune = try $ do
       value <- L.rune
       return $ S.RuneLiteral value
 
+    string :: Parser S.Literal
     string = try $ do
       value <- L.string
       return $ S.StringLiteral value
 
+    basic :: Parser S.Literal
     basic = integer
         <|> float
         <|> imaginary
         <|> rune
         <|> string
 
+    composite :: Parser S.Literal
     composite = try $ do
-      typeValue <- typeLiteral
+      typeValue <- literalType
       value <- literalValue
       return $ S.CompositeLiteral typeValue value
 
@@ -462,8 +548,16 @@ literalValue = try $ do
   where
     element = try $ do
       key <- option Nothing withKey
-      value <- literalValue <|> expression
+      value <- elementValue <|> elementExpr
       return $ S.LiteralElement key value
+
+    elementValue = try $ do
+      value <- literalValue
+      return $ S.ValueLiteralValue value
+
+    elementExpr = try $ do
+      value <- expression
+      return $ S.ValueExpr value
 
     withKey = fieldKey <|> literalKey <|> exprKey
 

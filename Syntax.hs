@@ -1,5 +1,8 @@
 module Syntax where
 
+import qualified Data.Complex as ComplexData
+import qualified Data.Ord as OrdData
+
 type Identifier = String
 type Package = Identifier
 type SliceStart = Integer
@@ -36,7 +39,7 @@ data UnaryExpr
   = PrimaryExpr PrimaryExpr
   -- FIXME: had to change this from 'UnaryExpr' to 'Expression'
   -- don't know if it will cause any problems
-  | UnaryOp UnaryOp Expression
+  | UnaryOpExpr UnaryOp Expression
   deriving (Eq, Ord, Show)
 
 data PrimaryExpr
@@ -52,9 +55,9 @@ data PrimaryExpr
 data BinaryOp
   = Or        -- ||
   | And       -- &&
-  | RelOp
-  | AddOp
-  | MulOp
+  | RelBinOp RelOp
+  | AddBinOp AddOp
+  | MulBinOp MulOp
   deriving (Eq, Ord, Show)
 
 data RelOp
@@ -104,7 +107,7 @@ data Operand
   = Literal Literal
   | OperandName OperandName
   | MethodExpr Type Identifier
-  | Expression Expression
+  | ExpressionInParens Expression
   deriving (Eq, Ord, Show)
 
 data OperandName
@@ -249,7 +252,7 @@ data AssignOp
 data Literal
   = IntLiteral Integer
   | FloatLiteral Double
-  | ImaginaryLiteral Double
+  | ImaginaryLiteral ComplexValue
   | RuneLiteral Char
   | StringLiteral String
   | CompositeLiteral LiteralType LiteralValue
@@ -287,3 +290,14 @@ data SourceFile = SourceFile Identifier [ImportDecl] [TopLevelDecl]
 
 data ImportSpec = ImportSpec Identifier String
   deriving (Eq, Ord, Show)
+
+type ComplexValue = ComplexData.Complex Double
+
+instance (Eq t, Ord t, RealFloat t) => Ord (ComplexData.Complex t) where
+  compare a b =
+    case byRealPart of
+      OrdData.EQ -> byImagPart
+      _ -> byRealPart
+    where
+      byRealPart = compare (ComplexData.realPart a) (ComplexData.realPart b)
+      byImagPart = compare (ComplexData.imagPart a) (ComplexData.imagPart b)
