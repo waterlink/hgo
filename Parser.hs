@@ -392,80 +392,75 @@ exprFactor = try $ do
   return $ S.Unary (S.PrimaryExpr value)
 
 primaryExpr :: Parser S.PrimaryExpr
-primaryExpr
-    = operandExpr
-  <|> conversion
-  <|> selector
-  <|> index
-  <|> slice
-  <|> sliceWithStep
-  <|> typeAssertion
-  <|> arguments
+primaryExpr = conversion <|> operandExpr
 
   where
+    afterPrimaryExpr :: S.PrimaryExpr -> Parser S.PrimaryExpr
+    afterPrimaryExpr value = option value (
+                            selector value
+                        <|> index value
+                        <|> slice value
+                        <|> sliceWithStep value
+                        <|> typeAssertion value
+                        <|> arguments value)
+
     operandExpr :: Parser S.PrimaryExpr
     operandExpr = try $ do
-      value <- operand
-      return $ S.Operand value
+      operandValue <- operand
+      afterPrimaryExpr $ S.Operand operandValue
 
     conversion :: Parser S.PrimaryExpr
     conversion = try $ do
       typeValue <- fullTypeValue
       L.operator "("
-      value <- expression
+      innerValue <- expression
       optional $ L.operator ","
       L.operator ")"
-      return $ S.Conversion (S.TypeConversion typeValue value)
+      afterPrimaryExpr $ S.Conversion (S.TypeConversion typeValue innerValue)
 
-    selector :: Parser S.PrimaryExpr
-    selector = try $ do
-      value <- primaryExpr
+    selector :: S.PrimaryExpr -> Parser S.PrimaryExpr
+    selector value = try $ do
       L.operator "."
       name <- L.identifier
-      return $ S.Selector value name
+      afterPrimaryExpr $ S.Selector value name
 
-    index :: Parser S.PrimaryExpr
-    index = try $ do
-      value <- primaryExpr
+    index :: S.PrimaryExpr -> Parser S.PrimaryExpr
+    index value = try $ do
       indexValue <- L.brackets expression
-      return $ S.Index value indexValue
+      afterPrimaryExpr $ S.Index value indexValue
 
-    slice :: Parser S.PrimaryExpr
-    slice = try $ do
-      value <- primaryExpr
+    slice :: S.PrimaryExpr -> Parser S.PrimaryExpr
+    slice value = try $ do
       L.operator "["
       start <- optionMaybe L.integer
       L.operator ":"
       end <- optionMaybe L.integer
       L.operator "]"
-      return $ S.Slice value start end Nothing
+      afterPrimaryExpr $ S.Slice value start end Nothing
 
-    sliceWithStep :: Parser S.PrimaryExpr
-    sliceWithStep = try $ do
-      value <- primaryExpr
+    sliceWithStep :: S.PrimaryExpr -> Parser S.PrimaryExpr
+    sliceWithStep value = try $ do
       L.operator "["
       start <- optionMaybe L.integer
       L.operator ":"
       end <- L.integer
       L.operator ":"
       step <- L.integer
-      return $ S.Slice value start (Just end) (Just step)
+      afterPrimaryExpr $ S.Slice value start (Just end) (Just step)
 
-    typeAssertion :: Parser S.PrimaryExpr
-    typeAssertion = try $ do
-      value <- primaryExpr
+    typeAssertion :: S.PrimaryExpr -> Parser S.PrimaryExpr
+    typeAssertion value = try $ do
       L.operator "."
       typeValue <- L.parens fullTypeValue
-      return $ S.TypeAssertion value typeValue
+      afterPrimaryExpr $ S.TypeAssertion value typeValue
 
     -- FIXME:
     -- - figure out what Type can do here (see go's RFC)
     -- - add support for Ellipsis
-    arguments :: Parser S.PrimaryExpr
-    arguments = try $ do
-      value <- primaryExpr
+    arguments :: S.PrimaryExpr -> Parser S.PrimaryExpr
+    arguments value = try $ do
       args <- L.parens $ L.commaSep expression
-      return $ S.Arguments value args Nothing Nothing
+      afterPrimaryExpr $ S.Arguments value args Nothing Nothing
 
 operand :: Parser S.Operand
 operand = literal <|> name <|> qualifiedName <|> methodExpr <|> exprInParens
@@ -577,23 +572,27 @@ literalValue = try $ do
       return $ Just (S.KeyExpr key)
 
 block :: Parser [S.Statement]
-block = L.braces $ L.semiSep statement
+block = empty <|> blockWithStatements
+  where
+    empty = try $ do
+      L.operator "{"
+      L.operator "}"
+      return $ []
+    blockWithStatements = try (L.braces $ L.semiSep statement)
 
--- FIXME: add support for:
--- - body
+-- FIXME: add support for all S.TopLevelDecl values
 topfundecl :: Parser S.TopLevelDecl
 topfundecl = do
   L.keyword "func"
   name <- L.identifier
   args <- paramdecllist
   result <- resultType
-  body <- block
-  return $ S.FunctionDecl name (S.Signature args result) Nothing
+  body <- optionMaybe block
+  return $ S.FunctionDecl name (S.Signature args result) body
 
 topdecl :: Parser S.TopLevelDecl
 topdecl = try topfundecl
 
--- FIXME: Add support for all S.TopLevelDecl values
 toplevel :: Parser [S.TopLevelDecl]
 toplevel = many $ do
   decl <- topdecl

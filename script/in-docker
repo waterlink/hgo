@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+docker run \
+  -it \
+  --rm \
+  -v $(pwd):/opt/app \
+  --cpu-shares=512 \
+  --cpuset-cpus=0,1 \
+  --memory=512m \
+  --memory-swap=128m \
+  dev-hgo \
+  "$@"
