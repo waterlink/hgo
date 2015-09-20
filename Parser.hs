@@ -292,12 +292,12 @@ sendstmt = try $ do
 
 simplestmt :: Parser S.SimpleStmt
 simplestmt
-    = exprstmt
-  <|> send
+    = send
   <|> incstmt
   <|> decstmt
   <|> assignstmt
   <|> shortvardecl
+  <|> exprstmt
   <|> emptystmt
   where
     exprstmt = try $ do
