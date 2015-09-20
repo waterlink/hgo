@@ -9,8 +9,11 @@ import qualified Text.Parsec.Token as Tok
 import qualified Lexer as L
 import qualified Syntax as S
 
+newUnaryOp :: S.UnaryOp -> S.Expression -> S.Expression
+newUnaryOp f e = S.Unary $ S.UnaryOp f e
+
 binary s f assoc = Ex.Infix (L.operator s >> return (S.Binary f)) assoc
-unary s f = Ex.Prefix (L.operator s >> return (S.Unary (S.UnaryOp f)))
+unary s f = Ex.Prefix (L.operator s >> return (newUnaryOp f))
 
 opTable = [[unary "+" S.UnPlus,
             unary "-" S.UnMinus,

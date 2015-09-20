@@ -34,7 +34,9 @@ data Expression
 
 data UnaryExpr
   = PrimaryExpr PrimaryExpr
-  | UnaryOp UnaryOp UnaryExpr
+  -- FIXME: had to change this from 'UnaryExpr' to 'Expression'
+  -- don't know if it will cause any problems
+  | UnaryOp UnaryOp Expression
   deriving (Eq, Ord, Show)
 
 data PrimaryExpr
