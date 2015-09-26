@@ -168,6 +168,9 @@ local = LocalReference T.i64
 iadd :: Operand -> Operand -> Codegen Operand
 iadd a b = instr $ Add False False a b []
 
+isub :: Operand -> Operand -> Codegen Operand
+isub a b = instr $ Sub False False a b []
+
 cons :: C.Constant -> Operand
 cons = ConstantOperand
 

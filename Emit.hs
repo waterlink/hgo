@@ -66,12 +66,16 @@ cgen (S.SimpleStmt (S.ExpressionStmt expr)) = cgenexpr expr
 cgen statement = error $ "Unable to understand statement: " ++ show statement
 
 cgenexpr :: S.Expression -> Codegen AST.Operand
-cgenexpr (S.Binary (S.AddBinOp S.Plus) a b) = do
-  ca <- cgenexpr a
-  cb <- cgenexpr b
-  iadd ca cb
+cgenexpr (S.Binary (S.AddBinOp S.Plus) a b) = binop iadd a b
+cgenexpr (S.Binary (S.AddBinOp S.Minus) a b) = binop isub a b
 
 cgenexpr (S.Unary (S.PrimaryExpr (S.Operand (S.Literal (S.IntLiteral value))))) = return $ cons $ C.Int 64 value
 cgenexpr (S.Unary (S.PrimaryExpr (S.Operand (S.OperandName (S.OperandIdentifier name))))) = getvar name
 
 cgenexpr expr = error $ "Unable to understand expression: " ++ show expr
+
+binop :: (AST.Operand -> AST.Operand -> Codegen AST.Operand) -> S.Expression -> S.Expression -> Codegen AST.Operand
+binop fn a b = do
+  ca <- cgenexpr a
+  cb <- cgenexpr b
+  fn ca cb
