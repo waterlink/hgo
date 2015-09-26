@@ -27,6 +27,7 @@ data Declaration
 data TopLevelDecl
   = Declaration Declaration
   | FunctionDecl Identifier FunctionSignature (Maybe [Statement])
+  | ExternFunctionDecl Identifier FunctionSignature    -- this is not part of go RFC
   | MethodDecl Receiver Identifier FunctionSignature (Maybe [Statement])
   deriving (Eq, Ord, Show)
 

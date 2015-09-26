@@ -5,10 +5,11 @@ module Codegen where
 
 import LLVM.General.AST
 import LLVM.General.AST.Global
-import qualified LLVM.General.AST as AST
+import qualified LLVM.General.AST.Global as G
 
 import qualified LLVM.General.AST.Constant as C
 import qualified LLVM.General.AST.Type as T
+import qualified LLVM.General.AST.Linkage as L
 import qualified LLVM.General.AST.Attribute as A
 import qualified LLVM.General.AST.CallingConvention as CC
 
@@ -21,13 +22,13 @@ import Data.List
 import Data.Function
 import qualified Data.Map as Map
 
-emptyModule :: String -> AST.Module
+emptyModule :: String -> Module
 emptyModule label = defaultModule { moduleName = label }
 
-newtype LLVM a = LLVM { unLLVM :: State AST.Module a }
-  deriving (Functor, Applicative, Monad, MonadState AST.Module)
+newtype LLVM a = LLVM { unLLVM :: State Module a }
+  deriving (Functor, Applicative, Monad, MonadState Module)
 
-runLLVM :: AST.Module -> LLVM a -> AST.Module
+runLLVM :: Module -> LLVM a -> Module
 runLLVM = flip (execState . unLLVM)
 
 addDefn :: Definition -> LLVM ()
@@ -42,6 +43,24 @@ define retty label argtys body = addDefn $
   , parameters  = ([Parameter ty nm [] | (ty, nm) <- argtys], False)
   , returnType  = retty
   , basicBlocks = body
+  }
+
+external :: Type -> String -> [(Type, Name)] -> LLVM ()
+external retty label argtys = addDefn $
+  GlobalDefinition $ functionDefaults {
+    name        = Name label
+  , parameters  = ([Parameter ty nm [] | (ty, nm) <- argtys], False)
+  , returnType  = retty
+  , basicBlocks = []
+  }
+
+addPrivConst :: Name -> T.Type -> C.Constant -> LLVM ()
+addPrivConst name ty value = addDefn $
+  GlobalDefinition $ globalAliasDefaults {
+    name        = name
+  , linkage     = L.Private
+  , G.type'       = ty
+  , aliasee     = value
   }
 
 -- # Names
@@ -61,6 +80,8 @@ instance IsString Name where
 
 type BlocksState = Map.Map Name BlockState
 type SymbolTable = [(String, Operand)]
+type SingleConstDef = (Name, T.Type, C.Constant)
+type ConstDef = [SingleConstDef]
 
 data CodegenState
   = CodegenState {
@@ -70,6 +91,7 @@ data CodegenState
   , blockCount   :: Int                    -- count of basic blocks
   , count        :: Word                   -- count of unnamed instructions
   , names        :: Names                  -- unique name supply
+  , consts       :: ConstDef               -- constant that need to be defined as private global
   } deriving Show
 
 data BlockState
@@ -78,7 +100,7 @@ data BlockState
   , stack  :: [Named Instruction]          -- instruction stack
   , term   :: Maybe (Named Terminator)     -- block terminator
   } deriving Show
-  
+
 newtype Codegen a = Codegen { runCodegen :: State CodegenState a }
   deriving (Functor, Applicative, Monad, MonadState CodegenState)
 
@@ -142,13 +164,21 @@ current = do
     Just x -> return x
     Nothing -> error $ "No such block: " ++ show c
 
+addConstDef :: Name -> T.Type -> C.Constant -> Codegen ()
+addConstDef name ty value = do
+  currentConsts <- gets consts
+  modify $ \s -> s { consts = [(name, ty, value)] ++ currentConsts }
+
+getConstants :: CodegenState -> ConstDef
+getConstants (CodegenState _ _ _ _ _ _ consts) = consts
+
 -- # LLVM instructions
 
 entryBlockName :: String
 entryBlockName = "entry"
 
 emptyCodegen :: CodegenState
-emptyCodegen = CodegenState (Name entryBlockName) Map.empty [] 1 0 Map.empty
+emptyCodegen = CodegenState (Name entryBlockName) Map.empty [] 1 0 Map.empty []
 
 execCodegen :: Codegen a -> CodegenState
 execCodegen m = execState (runCodegen m) emptyCodegen
@@ -160,8 +190,14 @@ fresh = do
   modify $ \s -> s { count = next }
   return $ next
 
-local :: Name -> Operand
-local = LocalReference T.i64
+local :: T.Type -> Name -> Operand
+local ty = LocalReference ty
+
+global :: T.Type -> Name -> Operand
+global ty = ConstantOperand . C.GlobalReference ty
+
+funref :: Name -> Operand
+funref = ConstantOperand . C.GlobalReference T.void
 
 -- # Arithmetic
 
@@ -183,12 +219,22 @@ imod a b = instr $ SRem a b []
 cons :: C.Constant -> Operand
 cons = ConstantOperand
 
+toArgs :: [Operand] -> [(Operand, [A.ParameterAttribute])]
+toArgs = map $ \x -> (x, [])
+
 -- # Vars
 
 assign :: String -> Operand -> Codegen ()
 assign var operand = do
   currentSymtab <- gets symtab
   modify $ \s -> s { symtab = [(var, operand)] ++ currentSymtab }
+
+tmpname :: String -> Codegen String
+tmpname name = do
+  nms <- gets names
+  let (uniqName, supply) = uniqueName name nms
+  modify $ \s -> s { names = supply }
+  return uniqName
 
 getvar :: String -> Codegen Operand
 getvar var = do
@@ -197,6 +243,9 @@ getvar var = do
     Just x -> return x
     Nothing -> error $ "Local variable not in scope: " ++ show var
 
+ptrof :: Operand -> Codegen Operand
+ptrof op = instr $ GetElementPtr True op [cons $ C.Int 64 0] []
+
 instr :: Instruction -> Codegen Operand
 instr ins = do
   n <- fresh
@@ -204,7 +253,7 @@ instr ins = do
   blk <- current
   let i = stack blk
   modifyBlock (blk { stack = i ++ [ref := ins] } )
-  return $ local ref
+  return $ local T.i64 ref
 
 terminator :: Named Terminator -> Codegen (Named Terminator)
 terminator trm = do
@@ -213,6 +262,9 @@ terminator trm = do
   return trm
 
 -- # Effects
+
+call :: Operand -> [Operand] -> Codegen Operand
+call fn args = instr $ Call False CC.C [] (Right fn) (toArgs args) [] []
 
 alloca :: Type -> Codegen Operand
 alloca ty = instr $ Alloca ty Nothing 0 []

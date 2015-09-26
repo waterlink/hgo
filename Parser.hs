@@ -580,7 +580,6 @@ block = empty <|> blockWithStatements
       return $ []
     blockWithStatements = try (L.braces $ L.semiSep statement)
 
--- FIXME: add support for all S.TopLevelDecl values
 topfundecl :: Parser S.TopLevelDecl
 topfundecl = do
   L.keyword "func"
@@ -590,8 +589,19 @@ topfundecl = do
   body <- optionMaybe block
   return $ S.FunctionDecl name (S.Signature args result) body
 
+topexterndecl :: Parser S.TopLevelDecl
+topexterndecl = do
+  L.keyword "extern"
+  name <- L.identifier
+  args <- paramdecllist
+  result <- resultType
+  return $ S.ExternFunctionDecl name (S.Signature args result)
+
+-- FIXME: add support for all S.TopLevelDecl values
 topdecl :: Parser S.TopLevelDecl
-topdecl = try topfundecl
+topdecl
+    = try topfundecl
+  <|> try topexterndecl
 
 toplevel :: Parser [S.TopLevelDecl]
 toplevel = many $ do
