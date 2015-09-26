@@ -4,6 +4,7 @@
 /.hpc
 *.tix
 /Main
+/ParserRepl
 /*.hs.html
 /hpc_*.html
 /dist
