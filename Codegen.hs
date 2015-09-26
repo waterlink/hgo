@@ -171,6 +171,15 @@ iadd a b = instr $ Add False False a b []
 isub :: Operand -> Operand -> Codegen Operand
 isub a b = instr $ Sub False False a b []
 
+imul :: Operand -> Operand -> Codegen Operand
+imul a b = instr $ Mul False False a b []
+
+idiv :: Operand -> Operand -> Codegen Operand
+idiv a b = instr $ SDiv False a b []
+
+imod :: Operand -> Operand -> Codegen Operand
+imod a b = instr $ SRem a b []
+
 cons :: C.Constant -> Operand
 cons = ConstantOperand
 

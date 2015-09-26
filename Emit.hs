@@ -69,6 +69,10 @@ cgenexpr :: S.Expression -> Codegen AST.Operand
 cgenexpr (S.Binary (S.AddBinOp S.Plus) a b) = binop iadd a b
 cgenexpr (S.Binary (S.AddBinOp S.Minus) a b) = binop isub a b
 
+cgenexpr (S.Binary (S.MulBinOp S.Mult) a b) = binop imul a b
+cgenexpr (S.Binary (S.MulBinOp S.Div) a b) = binop idiv a b
+cgenexpr (S.Binary (S.MulBinOp S.Mod) a b) = binop imod a b
+
 cgenexpr (S.Unary (S.PrimaryExpr (S.Operand (S.Literal (S.IntLiteral value))))) = return $ cons $ C.Int 64 value
 cgenexpr (S.Unary (S.PrimaryExpr (S.Operand (S.OperandName (S.OperandIdentifier name))))) = getvar name
 
