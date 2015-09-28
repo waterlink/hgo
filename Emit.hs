@@ -86,18 +86,19 @@ cgencall f args = do
   call cf cargs
 
 i8array :: String -> [C.Constant]
-i8array [] = []
+i8array [] = [C.Int 8 0]
 i8array (x:xs) = (C.Int 8 $ toInteger $ ord x):(i8array xs)
 
 cgencstring :: String -> Codegen AST.Operand
 cgencstring value = do
-  newName <- tmpname ".strconst"
-  let name = AST.Name newName
-  addConstDef name arrayOfChar $ C.Array T.char $ i8array value
-  ptrof $ global arrayOfChar name
+  var <- alloca $ T.array (fromIntegral $ length strvalue) T.char
+  store var strconst
+
+  ptr <- ptrof var
+  return ptr
   where
-    arrayOfChar = T.array size T.char
-    size = fromIntegral $ length value
+    strconst = cons $ C.Array T.char $ i8array value
+    strvalue = i8array value
 
 -- # Function generation helpers
 
@@ -123,7 +124,6 @@ blocksFor body funcArgs =
         assign name $ local ty $ AST.Name name
       forM body cgen
       voidRet
-
 
     executed = execCodegen code
     blocks = createBlocks executed

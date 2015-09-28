@@ -1,0 +1,5 @@
+extern printf(a, b cstring);
+
+func main() {
+  printf("hello, %s", "world")
+};

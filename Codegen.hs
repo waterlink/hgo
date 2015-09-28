@@ -244,7 +244,7 @@ getvar var = do
     Nothing -> error $ "Local variable not in scope: " ++ show var
 
 ptrof :: Operand -> Codegen Operand
-ptrof op = instr $ GetElementPtr True op [cons $ C.Int 64 0] []
+ptrof op = instr $ GetElementPtr True op [cons $ C.Int 64 0, cons $ C.Int 64 0] []
 
 instr :: Instruction -> Codegen Operand
 instr ins = do
