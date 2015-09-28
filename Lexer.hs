@@ -76,5 +76,7 @@ braces = Tok.braces lexer
 commaSep = Tok.commaSep lexer
 semiSep = Tok.semiSep lexer
 
+semi = operator ";"
+
 -- parse
 parse parser contents = P.parse parser "$STDIN" contents

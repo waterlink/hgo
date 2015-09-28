@@ -97,7 +97,6 @@ literalType
   <|> slice
   <|> map
   <|> name
-
   where
     array :: Parser S.LiteralType
     array = try $ do
@@ -393,7 +392,6 @@ exprFactor = try $ do
 
 primaryExpr :: Parser S.PrimaryExpr
 primaryExpr = conversion <|> operandExpr
-
   where
     afterPrimaryExpr :: S.PrimaryExpr -> Parser S.PrimaryExpr
     afterPrimaryExpr value = option value (
@@ -572,13 +570,7 @@ literalValue = try $ do
       return $ Just (S.KeyExpr key)
 
 block :: Parser [S.Statement]
-block = empty <|> blockWithStatements
-  where
-    empty = try $ do
-      L.operator "{"
-      L.operator "}"
-      return $ []
-    blockWithStatements = try (L.braces $ L.semiSep statement)
+block = L.braces $ statement `sepBy` L.semi
 
 topfundecl :: Parser S.TopLevelDecl
 topfundecl = do
@@ -604,9 +596,6 @@ topdecl
   <|> try topexterndecl
 
 toplevel :: Parser [S.TopLevelDecl]
-toplevel = many $ do
-  decl <- topdecl
-  L.operator ";"
-  return decl
+toplevel = topdecl `sepBy` L.semi
 
 parseTopLevel s = parse (contents toplevel) "<stdin>" s
