@@ -5,6 +5,7 @@
 *.tix
 /Main
 /ParserRepl
+/SemiRepl
 /*.hs.html
 /hpc_*.html
 /dist

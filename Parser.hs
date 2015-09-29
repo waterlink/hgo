@@ -596,6 +596,9 @@ topdecl
   <|> try topexterndecl
 
 toplevel :: Parser [S.TopLevelDecl]
-toplevel = topdecl `sepBy` L.semi
+toplevel = many $ do
+  decl <- topdecl
+  optional L.semi
+  return decl
 
 parseTopLevel s = parse (contents toplevel) "<stdin>" s

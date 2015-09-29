@@ -1,6 +1,6 @@
-extern printf(a, b cstring);
+extern printf(a, b cstring)
 
 func main() {
-  printf("hello, %s\n", "world");
+  printf("hello, %s\n", "world")
   printf("hi, %s!\n", "world")
 }

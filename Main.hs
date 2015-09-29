@@ -3,6 +3,7 @@ module Main where
 import Parser
 import Codegen
 import Emit
+import qualified AutoSemi as Semi
 
 import Control.Monad.Trans
 
@@ -17,6 +18,13 @@ initModule = emptyModule "hgo jit"
 
 process :: AST.Module -> String -> IO (Maybe AST.Module)
 process modo source = do
+  let transformed = Semi.addAutoSemi source
+  case transformed of
+    Left err -> print err >> return Nothing
+    Right source -> processTransformed modo source
+
+processTransformed :: AST.Module -> String -> IO (Maybe AST.Module)
+processTransformed modo source = do
   let res = parseTopLevel source
   case res of
     Left err -> print err >> return Nothing

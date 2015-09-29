@@ -1,4 +1,4 @@
-module Lexer where
+module LexerNL where
 
 import Data.List
 import Data.Ord
@@ -14,7 +14,7 @@ import qualified Text.Parsec.Token as Tok
 
 import Text.Parsec.Language (emptyDef)
 
-import TokenParser
+import TokenParserNL
 
 lexer = makeTokenParser style
   where
@@ -94,12 +94,13 @@ anyLiteral
   <|> P.try imaginaryToken
   <|> P.try integerToken
   <|> P.try runeToken
-  <|> P.try string
+  <|> P.try stringToken
 
 floatToken = float >>= return . show
 imaginaryToken = imaginary >>= return . show
 integerToken = integer >>= return . show
 runeToken = rune >>= return . (flip (:)) []
+stringToken = string >>= return . show
 
 nonNewlineWhitespace :: PS.Parser String
 nonNewlineWhitespace = P.oneOf " \t" >>= return . (flip (:)) []
