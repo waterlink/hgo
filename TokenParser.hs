@@ -40,7 +40,7 @@ import Text.Parsec.Char
 import Text.Parsec.Combinator
 import Text.Parsec.Token
 
-makeTokenParser languageDef
+makeTokenParser languageDef nlSensitive
     = TokenParser{ identifier = identifier
                  , reserved = reserved
                  , operator = operator
@@ -399,7 +399,16 @@ makeTokenParser languageDef
 
 
     simpleSpace =
-        skipMany1 (satisfy isSpace)
+        skipMany1 (satisfy genericIsSpace)
+
+    genericIsSpace =
+        if nlSensitive
+          then
+            isSpaceNLSensitive
+          else
+            isSpace
+
+    isSpaceNLSensitive c = (isSpace c) && (c /= '\n')
 
     oneLineComment =
         do{ try (string (commentLine languageDef))
