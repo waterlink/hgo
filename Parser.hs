@@ -196,7 +196,7 @@ paramdecl = withName <|> without
 
 contents :: Parser a -> Parser a
 contents p = do
-  Tok.whiteSpace L.lexer
+  Tok.whiteSpace L.l
   r <- p
   eof
   return r
