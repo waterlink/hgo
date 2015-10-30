@@ -134,6 +134,9 @@ blocksFor body funcArgs =
 getType :: S.Type -> LT.Type
 getType (S.TypeName (S.Identifier "cstring")) = T.cstring
 getType (S.TypeName (S.Identifier "int")) = T.i64
+getType (S.TypeLiteral (S.InterfaceType [])) = T.ptr T.void
+
+getType x = error $ "Unable to recognize type: " ++ show x
 
 defineConst :: SingleConstDef -> LLVM ()
 defineConst (name, ty, value) = addPrivConst name ty value

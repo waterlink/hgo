@@ -131,7 +131,6 @@ literalType
 
 -- FIXME: add support for:
 -- - struct
--- - interface
 -- - function
 typeLiteral :: Parser S.TypeLiteral
 typeLiteral
@@ -142,6 +141,7 @@ typeLiteral
   <|> channelro
   <|> channelwo
   <|> channelrw
+  <|> interface
   where
     -- FIXME: support expressions inside of [ ... ]
     array = try $ do
@@ -182,6 +182,11 @@ typeLiteral
       L.keyword "chan"
       value <- fullTypeValue
       return $ S.ChannelType value (Just ()) (Just ())
+
+    interface = try $ do
+      L.keyword "interface"
+      methodspecs <- L.braces $ methodspec `sepBy` L.semi
+      return $ S.InterfaceType methodspecs
 
 paramdecl :: Parser S.FunctionParameterDecl
 paramdecl = withName <|> without
@@ -571,6 +576,13 @@ literalValue = try $ do
 
 block :: Parser [S.Statement]
 block = L.braces $ statement `sepBy` L.semi
+
+methodspec :: Parser S.MethodSpec
+methodspec = do
+  name <- L.identifier
+  args <- paramdecllist
+  result <- resultType
+  return $ S.Method name $ S.Signature args result
 
 topfundecl :: Parser S.TopLevelDecl
 topfundecl = do
