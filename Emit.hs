@@ -122,12 +122,14 @@ blocksFor body funcArgs =
       setBlock entry
       forM funcArgs $ \(ty, (AST.Name name)) -> do
         assign name $ local ty $ AST.Name name
-      forM body cgen
+      forM (filter nonEmpty body) cgen
       voidRet
 
     executed = execCodegen code
     blocks = createBlocks executed
     constants = getConstants executed
+    nonEmpty (S.SimpleStmt S.Empty) = False
+    nonEmpty _ = True
 
 getType :: S.Type -> LT.Type
 getType (S.TypeName (S.Identifier "cstring")) = T.cstring
