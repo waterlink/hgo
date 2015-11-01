@@ -25,4 +25,4 @@ features to the language making it much more high level.
 
 ## LICENSE
 
-This image is licensed under the MIT License (see [LICENSE.txt](/LICENSE.txt)), and includes software licensed under the [Glasgow Haskell Compiler License](https://www.haskell.org/ghc/license) (BSD-style).
+This software is licensed under the MIT License (see [LICENSE.txt](/LICENSE.txt)), and includes software licensed under the [Glasgow Haskell Compiler License](https://www.haskell.org/ghc/license) (BSD-style).
