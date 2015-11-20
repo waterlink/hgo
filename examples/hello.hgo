@@ -1,4 +1,4 @@
-extern printf(a, b cstring)
+extern printf(f cstring, v interface{})
 
 func main() {
   printf("hello, %s\n", "world")
